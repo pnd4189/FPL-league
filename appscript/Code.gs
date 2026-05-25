@@ -463,44 +463,60 @@ function writeH2HMatches_(rows, sheetName) {
  *  ========================= */
 
 function buildTeamH2HByGameweek_(matchRows, fantasyRows, infoSheetName) {
-  var entryTeamMap = getEntryTeamMap_(infoSheetName);
-  var teamScoresByGw = buildTeamScoresByGw_(fantasyRows, entryTeamMap);
-  var pairByGw = {};
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Giải Team');
+
+  if (!sheet) {
+    throw new Error('Không tìm thấy sheet Giải Team để tính H2H team.');
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    throw new Error('Sheet Giải Team chưa có dữ liệu lịch team.');
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
   var updatedAt = new Date();
-
-  matchRows.forEach(function(row) {
-    var gw = Number(row[0]);
-    var entry1Id = String(row[11] || '').trim();
-    var entry2Id = String(row[12] || '').trim();
-    var team1 = entryTeamMap[entry1Id];
-    var team2 = entryTeamMap[entry2Id];
-
-    if (!gw || !team1 || !team2 || team1.key === team2.key) return;
-
-    var ordered = [team1, team2].sort(function(a, b) {
-      return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
-    });
-    var pairKey = gw + '|' + ordered[0].key + '|' + ordered[1].key;
-
-    if (!pairByGw[pairKey]) {
-      pairByGw[pairKey] = {
-        gw: gw,
-        teamA: ordered[0],
-        teamB: ordered[1],
-        kickoff: row[9] || ''
-      };
-    }
-  });
-
   var rows = [];
-  Object.keys(pairByGw).forEach(function(pairKey) {
-    var pair = pairByGw[pairKey];
-    var scoreA = getTeamGwScore_(teamScoresByGw, pair.gw, pair.teamA.key);
-    var scoreB = getTeamGwScore_(teamScoresByGw, pair.gw, pair.teamB.key);
 
-    if (!isRealNumber_(scoreA) || !isRealNumber_(scoreB)) return;
+  values.forEach(function(row) {
+    var gw = Number(row[0]);
+    var teamA = String(row[1] || '').trim();
+    var scoreA = Number(row[2]);
+    var scoreB = Number(row[3]);
+    var teamB = String(row[4] || '').trim();
 
-    appendTeamH2HRows_(rows, pair.gw, pair.teamA, pair.teamB, scoreA, scoreB, pair.kickoff, updatedAt);
+    if (!gw || !teamA || !teamB || isNaN(scoreA) || isNaN(scoreB)) return;
+
+    var diffA = scoreA - scoreB;
+    var h2hA = diffA > 0 ? 3 : diffA < 0 ? 0 : 1;
+    var h2hB = diffA > 0 ? 0 : diffA < 0 ? 3 : 1;
+
+    rows.push([
+      gw,
+      teamA,
+      teamB,
+      scoreA,
+      scoreB,
+      diffA,
+      h2hA,
+      getTeamH2HResult_(h2hA),
+      '',
+      updatedAt
+    ]);
+
+    rows.push([
+      gw,
+      teamB,
+      teamA,
+      scoreB,
+      scoreA,
+      -diffA,
+      h2hB,
+      getTeamH2HResult_(h2hB),
+      '',
+      updatedAt
+    ]);
   });
 
   rows.sort(function(a, b) {
@@ -511,69 +527,10 @@ function buildTeamH2HByGameweek_(matchRows, fantasyRows, infoSheetName) {
   return rows;
 }
 
-function appendTeamH2HRows_(rows, gw, teamA, teamB, scoreA, scoreB, kickoff, updatedAt) {
-  var diffA = scoreA - scoreB;
-  var h2hA = diffA > 0 ? 3 : diffA < 0 ? 0 : 1;
-  var h2hB = diffA > 0 ? 0 : diffA < 0 ? 3 : 1;
-
-  rows.push([
-    gw,
-    teamA.name,
-    teamB.name,
-    scoreA,
-    scoreB,
-    diffA,
-    h2hA,
-    getTeamH2HResult_(h2hA),
-    kickoff,
-    updatedAt
-  ]);
-
-  rows.push([
-    gw,
-    teamB.name,
-    teamA.name,
-    scoreB,
-    scoreA,
-    -diffA,
-    h2hB,
-    getTeamH2HResult_(h2hB),
-    kickoff,
-    updatedAt
-  ]);
-}
-
 function getTeamH2HResult_(h2hPoints) {
   if (h2hPoints === 3) return 'Thắng';
   if (h2hPoints === 1) return 'Hòa';
   return 'Thua';
-}
-
-function buildTeamScoresByGw_(fantasyRows, entryTeamMap) {
-  var scores = {};
-
-  fantasyRows.forEach(function(row) {
-    var entryId = String(row[0] || '').trim();
-    var gw = Number(row[1]);
-    var actualPoints = Number(row[11]);
-    var team = entryTeamMap[entryId];
-
-    if (!team || !gw || isNaN(actualPoints)) return;
-
-    if (!scores[gw]) scores[gw] = {};
-    if (!scores[gw][team.key]) scores[gw][team.key] = 0;
-
-    scores[gw][team.key] += actualPoints;
-  });
-
-  return scores;
-}
-
-function getTeamGwScore_(teamScoresByGw, gw, teamKey) {
-  if (!teamScoresByGw[gw] || !teamScoresByGw[gw].hasOwnProperty(teamKey)) {
-    return '';
-  }
-  return teamScoresByGw[gw][teamKey];
 }
 
 function getEntryTeamMap_(infoSheetName) {
@@ -663,231 +620,412 @@ function writeTeamH2HByGameweek_(rows, sheetName) {
 }
 
 function syncMonthlyTeamSummaries_(teamH2HRows, fantasyRows, infoSheetName) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var entryTeamMap = getEntryTeamMap_(infoSheetName);
-  var teamsByKey = getTeamsByKey_(entryTeamMap);
-  var teamScoresByGw = buildTeamScoresByGw_(fantasyRows, entryTeamMap);
-  var monthly = buildMonthlyTeamH2H_(teamH2HRows, teamsByKey);
   var updatedCells = 0;
 
-  SpreadsheetApp.getActiveSpreadsheet().getSheets().forEach(function(sheet) {
-    var month = parseMonthSheetName_(sheet.getName());
-    if (!month || !monthly[month]) return;
+  ss.getSheets().forEach(function(sheet) {
+    if (!/^Tháng \d+$/.test(sheet.getName())) return;
 
-    updatedCells += writeMonthlySummaryTables_(
-      sheet,
-      monthly[month],
-      teamScoresByGw,
-      teamsByKey
-    );
+    updatedCells += fixOneMonthlyTeamSummarySheet_(sheet, entryTeamMap);
   });
 
   return updatedCells;
 }
 
-function buildMonthlyTeamH2H_(teamH2HRows, teamsByKey) {
-  var monthly = {};
+function fixOneMonthlyTeamSummarySheet_(sheet, entryTeamMap) {
+  var maxCols = Math.max(sheet.getMaxColumns(), 60);
+  var row1 = sheet.getRange(1, 1, 1, maxCols).getValues()[0];
+  var row2 = sheet.getRange(2, 1, 1, maxCols).getValues()[0];
 
-  teamH2HRows.forEach(function(row) {
-    var month = getMonthFromDateValue_(row[8]);
-    var gw = Number(row[0]);
-    var teamName = String(row[1] || '').trim();
-    var teamKey = normalizeTeamKey_(teamName);
-    var h2hPoints = Number(row[6]);
-    var diff = Number(row[5]) || 0;
-
-    if (!month || !gw || !teamKey || isNaN(h2hPoints)) return;
-
-    if (!monthly[month]) {
-      monthly[month] = {
-        gwSet: {},
-        h2hByTeam: {},
-        diffByTeam: {}
-      };
-    }
-
-    if (!teamsByKey[teamKey]) {
-      teamsByKey[teamKey] = { key: teamKey, name: teamName };
-    }
-
-    monthly[month].gwSet[gw] = true;
-    if (!monthly[month].h2hByTeam[teamKey]) monthly[month].h2hByTeam[teamKey] = {};
-    if (!monthly[month].diffByTeam[teamKey]) monthly[month].diffByTeam[teamKey] = {};
-
-    monthly[month].h2hByTeam[teamKey][gw] = h2hPoints;
-    monthly[month].diffByTeam[teamKey][gw] = diff;
-  });
-
-  return monthly;
-}
-
-function writeMonthlySummaryTables_(sheet, monthData, teamScoresByGw, teamsByKey) {
-  var gwList = Object.keys(monthData.gwSet).map(function(gw) {
-    return Number(gw);
-  }).sort(function(a, b) { return a - b; });
-
+  var gwList = getMonthGwListFromSheet_(row1, row2);
   if (!gwList.length) return 0;
 
-  var classicRows = buildMonthlyTeamRows_(gwList, teamsByKey, function(teamKey, gw) {
-    return getTeamGwScore_(teamScoresByGw, gw, teamKey);
-  });
-  var h2hRows = buildMonthlyTeamRows_(gwList, teamsByKey, function(teamKey, gw) {
-    return getNestedNumber_(monthData.h2hByTeam, teamKey, gw);
-  }, function(teamKey) {
-    return sumTeamGwValues_(gwList, monthData.diffByTeam, teamKey);
-  });
-  var diffRows = buildMonthlyTeamRows_(gwList, teamsByKey, function(teamKey, gw) {
-    return getNestedNumber_(monthData.diffByTeam, teamKey, gw);
-  });
+  var sourceStartCol = findMonthlySourceStartCol_(sheet, maxCols);
+  var teamStartCol = sourceStartCol + 4 + gwList.length + 2;
 
-  var updated = 0;
-  updated += writeMonthlySummaryTable_(sheet, 1, 'CLASSIC', gwList, classicRows, 'Tổng Classic', '');
-  updated += writeMonthlySummaryTable_(sheet, 9, 'H2H', gwList, h2hRows, 'Tổng H2H', 'Hiệu số');
-  updated += writeMonthlySummaryTable_(sheet, 17, 'HIỆU SỐ', gwList, diffRows, 'Hiệu số', '');
+  writeMonthlyTeamClassicHelper_(sheet, teamStartCol, gwList, entryTeamMap);
+  writeMonthlyTeamH2HHelper_(sheet, teamStartCol, gwList);
+  writeMonthlyTeamDiffHelper_(sheet, teamStartCol, gwList);
 
-  return updated;
+  writeMonthlyVisibleTeamTables_(sheet, teamStartCol, gwList);
+
+  clearMonthlyStaleSpillAreas_(sheet, teamStartCol, gwList);
+
+  return gwList.length * 4 * 3;
 }
 
-function buildMonthlyTeamRows_(gwList, teamsByKey, valueGetter, extraGetter) {
-  var rows = [];
+function getMonthGwListFromSheet_(row1, row2) {
+  var gwList = [];
 
-  Object.keys(teamsByKey).forEach(function(teamKey) {
-    var team = teamsByKey[teamKey];
-    var total = 0;
-    var valuesByGw = {};
+  for (var c = 6; c <= row2.length; c++) {
+    var v = row1[c - 1];
+
+    if (typeof v === 'number' && v > 0) {
+      gwList.push(Number(v));
+      continue;
+    }
+
+    var s = String(row2[c - 1] || '').trim();
+    var m = s.match(/^GW(\d+)$/i);
+    if (m) {
+      gwList.push(Number(m[1]));
+      continue;
+    }
+
+    if (gwList.length) break;
+  }
+
+  return gwList;
+}
+
+function findMonthlySourceStartCol_(sheet, maxCols) {
+  var row2 = sheet.getRange(2, 1, 1, maxCols).getValues()[0];
+
+  for (var c = 16; c <= maxCols; c++) {
+    if (String(row2[c - 1] || '').trim().toLowerCase() === 'id') {
+      return c;
+    }
+  }
+
+  return 22;
+}
+
+function writeMonthlyTeamClassicHelper_(sheet, teamStartCol, gwList, entryTeamMap) {
+  var startRow = 2;
+  var width = 2 + gwList.length;
+
+  var values = [];
+  var headers = ['Team'];
+  gwList.forEach(function(gw) { headers.push(gw); });
+  headers.push('Tổng Classic');
+  values.push(headers);
+
+  var teams = getMonthlyTeamNames_();
+
+  teams.forEach(function(teamName) {
+    var row = [teamName];
 
     gwList.forEach(function(gw) {
-      var value = valueGetter(teamKey, gw);
-      valuesByGw[gw] = value;
-      if (isRealNumber_(value)) total += Number(value);
+      row.push(
+        '=IFERROR(SUM(FILTER(FantasyData!$L:$L;FantasyData!$B:$B=' +
+        gw +
+        ';ISNUMBER(MATCH(FantasyData!$A:$A;FILTER(Info!$A:$A;Info!$D:$D=$' +
+        columnToLetter_(teamStartCol) +
+        (values.length + startRow) +
+        ');0))));0)'
+      );
     });
 
-    rows.push({
-      key: teamKey,
-      name: team.name,
-      valuesByGw: valuesByGw,
-      total: total,
-      extra: extraGetter ? extraGetter(teamKey) : ''
-    });
+    row.push(
+      '=SUM(' +
+      columnToLetter_(teamStartCol + 1) +
+      (values.length + startRow) +
+      ':' +
+      columnToLetter_(teamStartCol + gwList.length) +
+      (values.length + startRow) +
+      ')'
+    );
+
+    values.push(row);
   });
 
-  rows.sort(function(a, b) {
-    if (b.total !== a.total) return b.total - a.total;
-    if (isRealNumber_(b.extra) && isRealNumber_(a.extra) && Number(b.extra) !== Number(a.extra)) {
-      return Number(b.extra) - Number(a.extra);
-    }
-    return a.name.localeCompare(b.name);
-  });
+  sheet.getRange(startRow, teamStartCol, values.length, width).setValues(values);
+  sheet.getRange(startRow + 1, teamStartCol + 1, 4, gwList.length + 1).setFormulas(
+    values.slice(1).map(function(row) {
+      return row.slice(1);
+    })
+  );
 
-  return rows;
-}
-
-function writeMonthlySummaryTable_(sheet, startRow, title, gwList, rows, totalHeader, extraHeader) {
-  var startCol = 13; // M
-  var width = 8;
-  var gwColumns = gwList.slice(0, extraHeader ? 4 : 5);
-  var hasExtra = Boolean(extraHeader) && gwColumns.length <= 4;
-  var values = [];
-  var titleRow = ['', title];
-  var headerRow = ['Xếp hạng', 'Tên đội'];
-
-  gwColumns.forEach(function(gw) {
-    titleRow.push(gw);
-    headerRow.push('GW' + gw);
-  });
-
-  headerRow.push(totalHeader);
-  titleRow.push('');
-
-  if (hasExtra) {
-    headerRow.push(extraHeader);
-    titleRow.push('');
-  }
-
-  while (titleRow.length < width) titleRow.push('');
-  while (headerRow.length < width) headerRow.push('');
-
-  values.push(titleRow.slice(0, width));
-  values.push(headerRow.slice(0, width));
-
-  rows.slice(0, 4).forEach(function(team, index) {
-    var row = [index + 1, team.name];
-
-    gwColumns.forEach(function(gw) {
-      row.push(team.valuesByGw.hasOwnProperty(gw) ? team.valuesByGw[gw] : '');
-    });
-
-    row.push(team.total);
-
-    if (hasExtra) {
-      row.push(team.extra);
-    }
-
-    while (row.length < width) row.push('');
-    values.push(row.slice(0, width));
-  });
-
-  while (values.length < 6) {
-    values.push(['', '', '', '', '', '', '', '']);
-  }
-
-  sheet.getRange(startRow, startCol, values.length, width).setValues(values);
-  sheet.getRange(startRow, startCol, 1, width)
-    .setFontWeight('bold')
-    .setHorizontalAlignment('center')
-    .setBackground('#FFF200');
-  sheet.getRange(startRow + 1, startCol, 1, width)
+  sheet.getRange(startRow, teamStartCol, 1, width)
     .setFontWeight('bold')
     .setHorizontalAlignment('center')
     .setBackground('#D9E2F3');
-
-  return rows.length * gwColumns.length;
 }
 
-function getTeamsByKey_(entryTeamMap) {
-  var teamsByKey = {};
+function writeMonthlyTeamH2HHelper_(sheet, teamStartCol, gwList) {
+  var startRow = 17;
+  var width = 3 + gwList.length;
 
-  Object.keys(entryTeamMap).forEach(function(entryId) {
-    var team = entryTeamMap[entryId];
-    if (!teamsByKey[team.key]) {
-      teamsByKey[team.key] = {
-        key: team.key,
-        name: team.name
-      };
-    }
+  var values = [];
+  var headers = ['Team'];
+  gwList.forEach(function(gw) { headers.push(gw); });
+  headers.push('Tổng H2H');
+  headers.push('Hiệu số');
+  values.push(headers);
+
+  var teams = getMonthlyTeamNames_();
+
+  teams.forEach(function(teamName, idx) {
+    var rowNumber = startRow + 1 + idx;
+    var row = [teamName];
+
+    gwList.forEach(function(gw, gwIdx) {
+      var gwCol = columnToLetter_(teamStartCol + 1 + gwIdx);
+      row.push(
+        '=IFERROR(SUMIFS(TeamH2HByGameweek!$G:$G;TeamH2HByGameweek!$A:$A;' +
+        gwCol +
+        '$' +
+        startRow +
+        ';TeamH2HByGameweek!$B:$B;$' +
+        columnToLetter_(teamStartCol) +
+        rowNumber +
+        ');0)'
+      );
+    });
+
+    row.push(
+      '=SUM(' +
+      columnToLetter_(teamStartCol + 1) +
+      rowNumber +
+      ':' +
+      columnToLetter_(teamStartCol + gwList.length) +
+      rowNumber +
+      ')'
+    );
+
+    row.push(
+      '=SUMIFS(TeamH2HByGameweek!$F:$F;TeamH2HByGameweek!$B:$B;$' +
+      columnToLetter_(teamStartCol) +
+      rowNumber +
+      ';TeamH2HByGameweek!$A:$A;">="&' +
+      gwList[0] +
+      ';TeamH2HByGameweek!$A:$A;"<="&' +
+      gwList[gwList.length - 1] +
+      ')'
+    );
+
+    values.push(row);
   });
 
-  return teamsByKey;
+  sheet.getRange(startRow, teamStartCol, values.length, width).setValues(values);
+  sheet.getRange(startRow + 1, teamStartCol + 1, 4, gwList.length + 2).setFormulas(
+    values.slice(1).map(function(row) {
+      return row.slice(1);
+    })
+  );
+
+  sheet.getRange(startRow, teamStartCol, 1, width)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setBackground('#D9E2F3');
 }
 
-function getNestedNumber_(data, teamKey, gw) {
-  if (!data[teamKey] || !data[teamKey].hasOwnProperty(gw)) return '';
-  return data[teamKey][gw];
+function writeMonthlyTeamDiffHelper_(sheet, teamStartCol, gwList) {
+  var startRow = 32;
+  var width = 2 + gwList.length;
+
+  var values = [];
+  var headers = ['Team'];
+  gwList.forEach(function(gw) { headers.push(gw); });
+  headers.push('Hiệu số');
+  values.push(headers);
+
+  var teams = getMonthlyTeamNames_();
+
+  teams.forEach(function(teamName, idx) {
+    var rowNumber = startRow + 1 + idx;
+    var row = [teamName];
+
+    gwList.forEach(function(gw, gwIdx) {
+      var gwCol = columnToLetter_(teamStartCol + 1 + gwIdx);
+      row.push(
+        '=IFERROR(SUMIFS(TeamH2HByGameweek!$F:$F;TeamH2HByGameweek!$A:$A;' +
+        gwCol +
+        '$' +
+        startRow +
+        ';TeamH2HByGameweek!$B:$B;$' +
+        columnToLetter_(teamStartCol) +
+        rowNumber +
+        ');0)'
+      );
+    });
+
+    row.push(
+      '=SUM(' +
+      columnToLetter_(teamStartCol + 1) +
+      rowNumber +
+      ':' +
+      columnToLetter_(teamStartCol + gwList.length) +
+      rowNumber +
+      ')'
+    );
+
+    values.push(row);
+  });
+
+  sheet.getRange(startRow, teamStartCol, values.length, width).setValues(values);
+  sheet.getRange(startRow + 1, teamStartCol + 1, 4, gwList.length + 1).setFormulas(
+    values.slice(1).map(function(row) {
+      return row.slice(1);
+    })
+  );
+
+  sheet.getRange(startRow, teamStartCol, 1, width)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setBackground('#D9E2F3');
 }
 
-function sumTeamGwValues_(gwList, data, teamKey) {
-  var total = 0;
+function writeMonthlyVisibleTeamTables_(sheet, teamStartCol, gwList) {
+  var maxCols = Math.max(sheet.getMaxColumns(), 60);
+
+  var row2 = sheet.getRange(2, 1, 1, maxCols).getValues()[0];
+  var row10 = sheet.getRange(10, 1, 1, maxCols).getValues()[0];
+  var row18 = sheet.getRange(18, 1, 1, maxCols).getValues()[0];
+
+  var classicStartCol = findHeaderColumnInRow_(row2, 'Xếp hạng', 13) || 13;
+  var h2hStartCol = findHeaderColumnInRow_(row10, 'Xếp hạng', 13) || classicStartCol;
+  var diffStartCol = findHeaderColumnInRow_(row18, 'Xếp hạng', 13) || classicStartCol;
+
+  writeVisibleHeader_(sheet, 2, classicStartCol, gwList, 'Tổng Classic', false);
+  writeVisibleHeader_(sheet, 10, h2hStartCol, gwList, 'Tổng H2H', true);
+  writeVisibleHeader_(sheet, 18, diffStartCol, gwList, 'Hiệu số', false);
+
+  var classicWidth = 3 + gwList.length;
+  var h2hWidth = 4 + gwList.length;
+  var diffWidth = 3 + gwList.length;
+
+  sheet.getRange(3, classicStartCol, 4, classicWidth).clearContent();
+  sheet.getRange(11, h2hStartCol, 4, h2hWidth).clearContent();
+  sheet.getRange(19, diffStartCol, 4, diffWidth).clearContent();
+
+  sheet.getRange(3, classicStartCol, 4, 1).setValues([[1], [2], [3], [4]]);
+  sheet.getRange(11, h2hStartCol, 4, 1).setValues([[1], [2], [3], [4]]);
+  sheet.getRange(19, diffStartCol, 4, 1).setValues([[1], [2], [3], [4]]);
+
+  var teamStart = columnToLetter_(teamStartCol);
+  var classicTotal = columnToLetter_(teamStartCol + 1 + gwList.length);
+  var h2hDiff = columnToLetter_(teamStartCol + 2 + gwList.length);
+  var diffTotal = columnToLetter_(teamStartCol + 1 + gwList.length);
+
+  sheet.getRange(3, classicStartCol + 1).setFormula(
+    '=SORT($' + teamStart + '$3:$' + classicTotal + '$6;' + (gwList.length + 2) + ';FALSE)'
+  );
+
+  sheet.getRange(11, h2hStartCol + 1).setFormula(
+    '=SORT($' + teamStart + '$18:$' + h2hDiff + '$21;' +
+    (gwList.length + 2) +
+    ';FALSE;' +
+    (gwList.length + 3) +
+    ';FALSE)'
+  );
+
+  sheet.getRange(19, diffStartCol + 1).setFormula(
+    '=SORT($' + teamStart + '$33:$' + diffTotal + '$36;' + (gwList.length + 2) + ';FALSE)'
+  );
+}
+
+function writeVisibleHeader_(sheet, row, startCol, gwList, totalHeader, hasExtraDiff) {
+  var headers = ['Xếp hạng', 'Tên đội'];
 
   gwList.forEach(function(gw) {
-    var value = getNestedNumber_(data, teamKey, gw);
-    if (isRealNumber_(value)) total += Number(value);
+    headers.push('GW' + gw);
   });
 
-  return total;
+  headers.push(totalHeader);
+
+  if (hasExtraDiff) {
+    headers.push('Hiệu số');
+  }
+
+  sheet.getRange(row, startCol, 1, headers.length).setValues([headers]);
+
+  sheet.getRange(row, startCol, 1, headers.length)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setBackground('#D9E2F3');
 }
 
-function parseMonthSheetName_(sheetName) {
-  var match = String(sheetName || '').match(/^Tháng (\d+)$/);
-  if (!match) return 0;
-  return Number(match[1]);
+function clearMonthlyStaleSpillAreas_(sheet, teamStartCol, gwList) {
+  var maxCols = Math.max(sheet.getMaxColumns(), 60);
+  var row2 = sheet.getRange(2, 1, 1, maxCols).getValues()[0];
+
+  var classicStartCol = findHeaderColumnInRow_(row2, 'Xếp hạng', 13) || 13;
+
+  if (classicStartCol > 13) {
+    sheet.getRange(3, 13, 4, classicStartCol - 13).clearContent();
+    sheet.getRange(11, 13, 4, classicStartCol - 13).clearContent();
+    sheet.getRange(18, 13, 5, classicStartCol - 13).clearContent();
+  }
+
+  var h2hLastCol = teamStartCol + 2 + gwList.length;
+  sheet.getRange(17, h2hLastCol + 1, 20, 3).clearContent();
 }
 
-function getMonthFromDateValue_(value) {
-  if (!value) return 0;
+function getMonthlyTeamNames_() {
+  return [
+    '=Info!$G$2',
+    '=Info!$G$3',
+    '=Info!$G$4',
+    '=Info!$G$5'
+  ];
+}
 
-  var date = value instanceof Date ? value : new Date(value);
-  if (isNaN(date.getTime())) return 0;
+function findHeaderColumnInRow_(rowValues, headerText, startCol) {
+  var target = String(headerText || '').trim().toLowerCase();
 
-  return date.getMonth() + 1;
+  for (var c = startCol; c <= rowValues.length; c++) {
+    if (String(rowValues[c - 1] || '').trim().toLowerCase() === target) {
+      return c;
+    }
+  }
+
+  return 0;
+}
+
+function columnToLetter_(column) {
+  var temp = '';
+  var letter = '';
+
+  while (column > 0) {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    column = (column - temp - 1) / 26;
+  }
+
+  return letter;
+}
+
+function repairHTCVTeamH2HNow() {
+  ensureBaseSheets_();
+
+  var cfg = getConfig_();
+  var fantasySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(cfg.FANTASYDATA_SHEET);
+  if (!fantasySheet) throw new Error('Không tìm thấy FantasyData.');
+
+  var fantasyRows = [];
+  var lastFantasyRow = fantasySheet.getLastRow();
+
+  if (lastFantasyRow > 1) {
+    fantasyRows = fantasySheet
+      .getRange(2, 1, lastFantasyRow - 1, 12)
+      .getValues();
+  }
+
+  var teamRows = buildTeamH2HByGameweek_([], fantasyRows, cfg.INFO_SHEET);
+  writeTeamH2HByGameweek_(teamRows, cfg.TEAM_H2H_BY_GW_SHEET);
+
+  var updatedCells = syncMonthlyTeamSummaries_(
+    teamRows,
+    fantasyRows,
+    cfg.INFO_SHEET
+  );
+
+  appendStatusLog_(
+    'repairHTCVTeamH2HNow',
+    'Success',
+    '',
+    teamRows.length,
+    'Team H2H repaired; monthly cells updated: ' + updatedCells
+  );
+
+  SpreadsheetApp.flush();
+
+  alertSafe_(
+    'Repair hoàn tất',
+    'Đã sửa Team H2H và cập nhật lại các sheet tháng. Rows TeamH2H: ' + teamRows.length
+  );
 }
 
 function getMatchEntryId_(match, side) {
