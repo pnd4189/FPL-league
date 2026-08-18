@@ -1,0 +1,234 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ========================================================
+     THEME 1: FPL CLASSIC (Official Premier League Broadcast)
+     ======================================================== */
+  :root,
+  [data-theme='fpl'] {
+    --bg-app: #080310;
+    --bg-header: rgba(14, 5, 24, 0.85);
+    --bg-card: rgba(28, 12, 44, 0.72);
+    --bg-card-hover: rgba(44, 18, 68, 0.88);
+    --bg-card-solid: #1b082c;
+    --bg-elevated: rgba(55, 0, 60, 0.4);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-highlight: rgba(0, 255, 135, 0.35);
+    --text-main: #ffffff;
+    --text-muted: #94a3b8;
+    --text-faint: #64748b;
+    --accent-primary: #00ff87;     /* EPL Green */
+    --accent-secondary: #04f5ff;   /* EPL Cyan */
+    --accent-tertiary: #e90052;    /* EPL Pink */
+    --accent-gold: #ffd700;        /* Trophy Gold */
+    --accent-brand: #37003c;       /* EPL Purple */
+    --stadium-tint: rgba(55, 0, 60, 0.5);
+    --glow-primary: rgba(0, 255, 135, 0.35);
+    --table-head-bg: #180826;
+    --table-row-hover: rgba(255, 255, 255, 0.04);
+  }
+
+  /* ========================================================
+     THEME 2: MIDNIGHT CARBON (Dark Luxe / Linear Minimalist)
+     ======================================================== */
+  [data-theme='dark'] {
+    --bg-app: #090a0f;
+    --bg-header: rgba(13, 15, 22, 0.88);
+    --bg-card: rgba(18, 21, 30, 0.8);
+    --bg-card-hover: rgba(26, 31, 44, 0.9);
+    --bg-card-solid: #141720;
+    --bg-elevated: rgba(30, 36, 52, 0.5);
+    --border-subtle: rgba(255, 255, 255, 0.09);
+    --border-highlight: rgba(16, 185, 129, 0.4);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-faint: #64748b;
+    --accent-primary: #10b981;     /* Clean Emerald */
+    --accent-secondary: #06b6d4;   /* Cool Cyan */
+    --accent-tertiary: #f43f5e;    /* Rose Red */
+    --accent-gold: #f59e0b;        /* Amber Gold */
+    --accent-brand: #1e293b;       /* Slate Dark */
+    --stadium-tint: rgba(15, 23, 42, 0.7);
+    --glow-primary: rgba(16, 185, 129, 0.3);
+    --table-head-bg: #11141c;
+    --table-row-hover: rgba(255, 255, 255, 0.04);
+  }
+
+  /* ========================================================
+     THEME 3: STUDIO DAYLIGHT (Light Editorial / High Contrast)
+     ======================================================== */
+  [data-theme='light'] {
+    --bg-app: #f1f5f9;
+    --bg-header: rgba(255, 255, 255, 0.95);
+    --bg-card: #ffffff;
+    --bg-card-hover: #f8fafc;
+    --bg-card-solid: #ffffff;
+    --bg-elevated: #e2e8f0;
+    --border-subtle: #cbd5e1;
+    --border-highlight: rgba(67, 56, 202, 0.5);
+    --text-main: #0f172a;
+    --text-muted: #334155;
+    --text-faint: #64748b;
+    --accent-primary: #047857;     /* Deep Emerald (High Contrast) */
+    --accent-secondary: #0369a1;   /* Deep Sky Blue (High Contrast) */
+    --accent-tertiary: #be123c;    /* Deep Crimson (High Contrast) */
+    --accent-gold: #b45309;        /* Warm Amber Gold (High Contrast) */
+    --accent-brand: #4338ca;       /* Premier Indigo */
+    --stadium-tint: rgba(241, 245, 249, 0.88);
+    --glow-primary: rgba(4, 120, 87, 0.2);
+    --table-head-bg: #eef2f6;
+    --table-row-hover: #f1f5f9;
+  }
+
+  /* ========================================================
+     THEME 4: VOLT PITCH (Cyber Athletic / Modern UCL & EA FC)
+     ======================================================== */
+  [data-theme='volt'] {
+    --bg-app: #060b0e;
+    --bg-header: rgba(10, 19, 26, 0.9);
+    --bg-card: rgba(13, 24, 32, 0.8);
+    --bg-card-hover: rgba(19, 36, 48, 0.92);
+    --bg-card-solid: #0d1a24;
+    --bg-elevated: rgba(18, 42, 56, 0.5);
+    --border-subtle: rgba(204, 255, 0, 0.12);
+    --border-highlight: rgba(204, 255, 0, 0.45);
+    --text-main: #ffffff;
+    --text-muted: #93c5fd;
+    --text-faint: #64748b;
+    --accent-primary: #ccff00;     /* Volt Lime */
+    --accent-secondary: #00f2fe;   /* Electric Ice Cyan */
+    --accent-tertiary: #ff2a6d;    /* Hot Coral */
+    --accent-gold: #ffd200;        /* Cyber Gold */
+    --accent-brand: #0c202d;       /* Pitch Navy */
+    --stadium-tint: rgba(6, 40, 56, 0.55);
+    --glow-primary: rgba(204, 255, 0, 0.35);
+    --table-head-bg: #09141c;
+    --table-row-hover: rgba(204, 255, 0, 0.05);
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.012em;
+    overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Custom modern scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-app);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+  }
+}
+
+/* Glassmorphism card surfaces */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-theme='light'] .glass-panel {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+}
+
+.glass-panel-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-panel-hover:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-highlight);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px 0 var(--glow-primary);
+}
+
+/* Pitch tactical grid background */
+.pitch-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 255, 135, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 255, 135, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+[data-theme='volt'] .pitch-grid {
+  background-image: 
+    linear-gradient(to right, rgba(204, 255, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(204, 255, 0, 0.05) 1px, transparent 1px);
+}
+
+[data-theme='dark'] .pitch-grid {
+  background-image: 
+    linear-gradient(to right, rgba(16, 185, 129, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.04) 1px, transparent 1px);
+}
+
+[data-theme='light'] .pitch-grid {
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+}
+
+/* Trophy podium steps */
+.podium-1 {
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.25) 0%, var(--bg-card-solid) 100%);
+  border-top: 3px solid var(--accent-gold);
+}
+.podium-2 {
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.2) 0%, var(--bg-card-solid) 100%);
+  border-top: 3px solid #e2e8f0;
+}
+.podium-3 {
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.2) 0%, var(--bg-card-solid) 100%);
+  border-top: 3px solid #f97316;
+}
+
+/* Custom mobile responsive utilities */
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+/* Mobile smooth touch scrolling */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Safe area padding for mobile notches and home bars */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Hide scrollbars while keeping swipeable scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide default cursor on desktop when custom cursor is active */
+@media (hover: hover) and (pointer: fine) {
+  .custom-cursor-active,
+  .custom-cursor-active * {
+    cursor: none !important;
+  }
+}
+
