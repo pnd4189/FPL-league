@@ -24,7 +24,7 @@ const CONFIG = {
     { id: 3053458, team: "vito_scaletta", manager: "Hải" },
     { id: 4334607, team: "VMC", manager: "Cường" },
     { id: 4403856, team: "dam thanh's Team", manager: "Shark Lâm" },
-    { id: 9999999, team: "Tân Team", manager: "Tân" } // ID sẽ cập nhật sau
+    { id: 5934296, team: "Tân Team", manager: "Tân" }
   ],
   FEE: {
     ENTRY: 500000,

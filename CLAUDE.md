@@ -43,7 +43,7 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 
 ## Key Data
 
-- 14 managers (IDs: 57214, 71922, 152158, 186794, 695284, 701064, 786718, 832249, 1189156, 1860254, 3053458, 4334607, 4403856, 9999999)
+- 14 managers (IDs: 57214, 71922, 152158, 186794, 695284, 701064, 786718, 832249, 1189156, 1860254, 3053458, 4334607, 4403856, 5934296)
 - Classic League: 132688, H2H League: 132702
 - Prize pool: 7,000,000 VND (14 × 500k fee)
 - Prize structure: Weekly 50k×38, Monthly Classic 100k×10, Monthly H2H 100k×10, Season Classic top3 800k/500k/200k, Season H2H top3 800k/500k/200k, Cup 100k
@@ -76,7 +76,6 @@ Read responses are cached 5 min under a generation token; `refreshFPLAll()` bump
 - Frontend live at https://htcv-fpl.vercel.app (Vercel project `htcv-fpl`, already linked via `web/.vercel`)
 
 ### 🔲 Remaining
-- Update Tân's actual FPL Entry ID once registered
 - End-of-season: Cup bracket activation after GW35
 
 ## Commands

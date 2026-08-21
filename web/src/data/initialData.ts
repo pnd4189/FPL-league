@@ -146,7 +146,7 @@ export const INITIAL_PLAYERS: Player[] = [
   },
   // 14. Tân
   {
-    id: 9999999,
+    id: 5934296,
     team: 'Tân Team',
     manager: 'Tân',
     avatarUrl: '/avatars/tan.png',
