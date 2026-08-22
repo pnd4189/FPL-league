@@ -378,19 +378,35 @@ function updateMonthlyAwards() {
     playerGW[id][fdData[i][1]] = fdData[i][11];
   }
 
-  // Build lookup: playerId → gw → h2h points (3/1/0)
+  // Build lookups: playerId → gw → h2h points (3/1/0), match points for,
+  // and match points against. The latter two feed the H2H monthly
+  // tiebreak (GD, then GF) mirroring the website's provisional table.
   const h2hSheet = getSheet("LichThiDauLeague");
   const h2hData = h2hSheet ? h2hSheet.getDataRange().getValues() : [];
   const playerH2H = {};
+  const playerH2HGF = {};
+  const playerH2HGA = {};
   for (let i = 1; i < h2hData.length; i++) {
     const gw = h2hData[i][0];
     const homeId = String(h2hData[i][11]);
     const awayId = String(h2hData[i][12]);
 
-    if (!playerH2H[homeId]) playerH2H[homeId] = {};
-    if (!playerH2H[awayId]) playerH2H[awayId] = {};
+    if (!playerH2H[homeId]) {
+      playerH2H[homeId] = {};
+      playerH2HGF[homeId] = {};
+      playerH2HGA[homeId] = {};
+    }
+    if (!playerH2H[awayId]) {
+      playerH2H[awayId] = {};
+      playerH2HGF[awayId] = {};
+      playerH2HGA[awayId] = {};
+    }
     playerH2H[homeId][gw] = (playerH2H[homeId][gw] || 0) + h2hData[i][4];
     playerH2H[awayId][gw] = (playerH2H[awayId][gw] || 0) + h2hData[i][7];
+    playerH2HGF[homeId][gw] = (playerH2HGF[homeId][gw] || 0) + h2hData[i][3];
+    playerH2HGA[homeId][gw] = (playerH2HGA[homeId][gw] || 0) + h2hData[i][6];
+    playerH2HGF[awayId][gw] = (playerH2HGF[awayId][gw] || 0) + h2hData[i][6];
+    playerH2HGA[awayId][gw] = (playerH2HGA[awayId][gw] || 0) + h2hData[i][3];
   }
 
   // Preserve the manually maintained payment columns I/J.
@@ -403,7 +419,7 @@ function updateMonthlyAwards() {
     const bucket = buckets[m];
     const previous = existing[m + 1] || [];
     const classicBest = pickMonthlyBest_(players, bucket.gws, playerGW);
-    const h2hBest = pickMonthlyBest_(players, bucket.gws, playerH2H);
+    const h2hBest = pickMonthlyH2HBest_(players, bucket.gws, playerH2H, playerH2HGF, playerH2HGA, playerGW);
 
     rows.push([
       bucket.label,
@@ -456,6 +472,66 @@ function pickMonthlyBest_(players, gws, lookup) {
   }
 
   return { managers: managers, pts: bestPts === null ? 0 : bestPts };
+}
+
+/**
+ * Monthly H2H champion ranked by 1. H2H points, 2. goal difference
+ * (match points for − against), 3. match points for, 4. month classic
+ * total — the same rule the website's provisional H2H table shows.
+ * Joint winners only when all four criteria are exactly equal.
+ * @param {Object} h2hPtsLookup  playerId → gw → h2h points (3/1/0)
+ * @param {Object} gfLookup      playerId → gw → match points scored
+ * @param {Object} gaLookup      playerId → gw → match points conceded
+ * @param {Object} classicLookup playerId → gw → net classic points
+ * @return {{managers: string[], pts: number}}
+ */
+function pickMonthlyH2HBest_(players, gws, h2hPtsLookup, gfLookup, gaLookup, classicLookup) {
+  let bestKey = null;
+  let bestPts = 0;
+  let managers = [];
+
+  for (const player of players) {
+    const ptsByGw = h2hPtsLookup[String(player.id)];
+    if (!ptsByGw) continue;
+
+    const gfByGw = gfLookup[String(player.id)] || {};
+    const gaByGw = gaLookup[String(player.id)] || {};
+    const classicByGw = classicLookup[String(player.id)] || {};
+
+    let h2hPts = 0;
+    let goalsFor = 0;
+    let goalsAgainst = 0;
+    let classicPts = 0;
+    let hasData = false;
+    for (const gw of gws) {
+      if (ptsByGw[gw] !== undefined) {
+        h2hPts += ptsByGw[gw];
+        hasData = true;
+      }
+      if (gfByGw[gw] !== undefined) goalsFor += gfByGw[gw];
+      if (gaByGw[gw] !== undefined) goalsAgainst += gaByGw[gw];
+      if (classicByGw[gw] !== undefined) classicPts += classicByGw[gw];
+    }
+    if (!hasData) continue;
+
+    const key = [h2hPts, goalsFor - goalsAgainst, goalsFor, classicPts];
+    let cmp = 0;
+    if (bestKey === null) {
+      cmp = 1;
+    } else {
+      for (let k = 0; k < key.length && cmp === 0; k++) cmp = key[k] - bestKey[k];
+    }
+
+    if (cmp > 0) {
+      bestKey = key;
+      bestPts = h2hPts;
+      managers = [player.manager];
+    } else if (cmp === 0) {
+      managers.push(player.manager);
+    }
+  }
+
+  return { managers: managers, pts: bestKey === null ? 0 : bestPts };
 }
 
 // ============================================================
