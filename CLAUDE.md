@@ -75,7 +75,7 @@ Read responses are cached 5 min under a generation token; `refreshFPLAll()` bump
 - Fan club branding and real avatar photos for all 14 managers (Shark Tú, Shark Lâm, Hải, Tân, etc.)
 - Frontend live at https://htcv-fpl.vercel.app (Vercel project `htcv-fpl`, already linked via `web/.vercel`)
 - Captain pick + captain points columns in Nhất Tuần (live GW only, from `?action=live`)
-- Squad hover popup on current-GW points in every tab that shows them (Nhất Tuần, Classic League ⚡GW column, H2H live match cards, Nhất Tháng per-GW cells) — fplgames-style, `web/src/components/SquadTooltip.tsx` + `SquadPopupWrap`
+- Squad popup on current-GW points in every tab that shows them (Nhất Tuần, Classic League ⚡GW column, H2H live match cards, Nhất Tháng per-GW cells) — fplgames-style, `web/src/components/SquadTooltip.tsx` + `SquadPopupWrap`. Desktop: cursor tooltip on hover. Touch: tap the points for a bottom sheet (backdrop/✕/Esc/re-tap close)
 - Classic tab renamed "Classic League", with a live current-GW column right before TOTAL
 - Manager modal links to the official squad: `fantasy.premierleague.com/en/entry/{id}/event/{gw}`
 
