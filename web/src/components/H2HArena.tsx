@@ -3,6 +3,7 @@ import { Swords, Trophy, ChevronLeft, ChevronRight, Crown } from 'lucide-react';
 import { H2HStanding, H2HMatch, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { INITIAL_PLAYERS, getH2HMatchupsForGW } from '../data/initialData';
+import { SquadPopupWrap } from './SquadTooltip';
 
 interface H2HArenaProps {
   standings: H2HStanding[];
@@ -209,10 +210,12 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                       <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{m.homeTeam}</p>
                     </div>
                   </div>
-                  <span className="text-sm font-mono font-bold px-2 py-0.5 rounded"
+                  <span className="text-sm font-mono font-bold px-2 py-0.5 rounded cursor-help"
                     style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
                   >
-                    {m.homePts > 0 ? m.homePts : '-'}
+                    <SquadPopupWrap live={live} gw={selectedGW} managerId={m.homeId}>
+                      <span>{m.homePts > 0 ? m.homePts : '-'}</span>
+                    </SquadPopupWrap>
                   </span>
                 </div>
 
@@ -237,10 +240,12 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                       <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{m.awayTeam}</p>
                     </div>
                   </div>
-                  <span className="text-sm font-mono font-bold px-2 py-0.5 rounded"
+                  <span className="text-sm font-mono font-bold px-2 py-0.5 rounded cursor-help"
                     style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
                   >
-                    {m.awayPts > 0 ? m.awayPts : '-'}
+                    <SquadPopupWrap live={live} gw={selectedGW} managerId={m.awayId}>
+                      <span>{m.awayPts > 0 ? m.awayPts : '-'}</span>
+                    </SquadPopupWrap>
                   </span>
                 </div>
 

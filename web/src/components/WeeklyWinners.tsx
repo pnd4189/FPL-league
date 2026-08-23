@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Zap, Trophy, Award, CheckCircle2, Clock, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { WeeklyWinner, ClassicStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
-import { SquadTooltip } from './SquadTooltip';
+import { SquadPopupWrap } from './SquadTooltip';
 import { shareAmount } from '../services/prizes';
 
 interface WeeklyWinnersProps {
@@ -365,12 +365,13 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                             {p.hasPlayed ? p.points : '-'} <span className="text-[9px] sm:text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>pts</span>
                           </span>
                         );
-                        const liveRow = liveById.get(p.id);
                         // Hovering the points opens the whole squad with live
                         // player points while the gameweek is running.
-                        return live && live.gw === selectedGW && liveRow?.squad?.length ? (
-                          <SquadTooltip score={liveRow} gw={selectedGW}>{cell}</SquadTooltip>
-                        ) : cell;
+                        return (
+                          <SquadPopupWrap live={live} gw={selectedGW} managerId={p.id}>
+                            {cell}
+                          </SquadPopupWrap>
+                        );
                       })()}
                     </td>
 

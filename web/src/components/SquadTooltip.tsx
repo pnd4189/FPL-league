@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LiveScore } from '../types';
+import { LiveGwData, LiveScore } from '../types';
 
 interface SquadTooltipProps {
   /** The manager's live row carrying the squad. */
@@ -154,5 +154,36 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
         document.body,
       )}
     </span>
+  );
+};
+
+
+/** A manager's live row when it carries a squad for the given gameweek. */
+export function squadOf(
+  live: LiveGwData | null | undefined,
+  gw: number,
+  managerId: number,
+): LiveScore | undefined {
+  if (!live || live.gw !== gw) return undefined;
+  const row = live.scores.find(s => s.id === managerId);
+  return row && row.squad && row.squad.length ? row : undefined;
+}
+
+/**
+ * Wrap any current-gameweek points display with the squad hover popup.
+ * Renders the children untouched when no squad data is available (settled
+ * gameweeks, pre-season, backend offline).
+ */
+export const SquadPopupWrap: React.FC<{
+  live: LiveGwData | null | undefined;
+  gw: number;
+  managerId: number;
+  children: React.ReactNode;
+}> = ({ live, gw, managerId, children }) => {
+  const score = squadOf(live, gw, managerId);
+  return score ? (
+    <SquadTooltip score={score} gw={gw}>{children}</SquadTooltip>
+  ) : (
+    <>{children}</>
   );
 };

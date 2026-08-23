@@ -290,6 +290,7 @@ export const App: React.FC = () => {
             currentGW={currentGW}
             currentMonthName={currentMonthName}
             isLive={isLiveNow}
+            live={live}
             months={months}
             onSelectPlayer={(id) => setSelectedPlayerId(id)}
           />
@@ -322,7 +323,9 @@ export const App: React.FC = () => {
             classicStandings={liveClassicStandings}
             h2hStandings={liveH2HStandings}
             currentMonthName={currentMonthName}
+            currentGW={currentGW}
             isLive={isLiveNow}
+            live={live}
             months={months}
             onSelectPlayer={(id) => setSelectedPlayerId(id)}
           />

@@ -45,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: Activity },
-    { id: 'classic', label: 'Classic BXH', shortLabel: 'Classic', icon: Trophy },
+    { id: 'classic', label: 'Classic League', shortLabel: 'Classic', icon: Trophy },
     { id: 'h2h', label: 'H2H League', shortLabel: 'H2H', icon: Swords },
     { id: 'weekly', label: 'Nhất Tuần (50k)', shortLabel: 'Tuần', icon: Zap },
     { id: 'monthly', label: 'Nhất Tháng', shortLabel: 'Tháng', icon: Calendar },

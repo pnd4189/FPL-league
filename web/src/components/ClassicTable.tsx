@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Search, Award, Crown } from 'lucide-react';
-import { ClassicStanding } from '../types';
+import { ClassicStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { MonthRange } from '../services/liveStandings';
+import { SquadPopupWrap } from './SquadTooltip';
 import { MONTH_RANGES } from '../data/initialData';
 
 interface ClassicTableProps {
@@ -10,6 +11,7 @@ interface ClassicTableProps {
   currentGW?: number;
   currentMonthName?: string;
   isLive?: boolean;
+  live?: LiveGwData | null;
   months?: MonthRange[];
   onSelectPlayer: (id: number) => void;
 }
@@ -19,6 +21,7 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
   currentGW = 1,
   currentMonthName,
   isLive = false,
+  live = null,
   months = MONTH_RANGES,
   onSelectPlayer,
 }) => {
@@ -169,6 +172,15 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
                 >
                   HLV & Đội Bóng
                 </th>
+                <th className="py-2.5 sm:py-3 px-2 sm:px-3 text-center min-w-[55px] sm:min-w-[62px] font-extrabold border-r"
+                  style={{
+                    backgroundColor: isLive ? 'rgba(255, 45, 85, 0.10)' : 'rgba(0, 245, 255, 0.06)',
+                    color: isLive ? '#ff2d55' : 'var(--accent-secondary)',
+                    borderColor: 'var(--border-subtle)'
+                  }}
+                >
+                  {isLive ? '⚡ ' : ''}GW{currentGW}
+                </th>
                 <th className="py-2.5 sm:py-3 px-2 sm:px-3 text-center min-w-[65px] sm:min-w-[70px] font-extrabold border-r"
                   style={{
                     backgroundColor: 'rgba(0, 255, 135, 0.08)',
@@ -254,6 +266,25 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
                         </div>
                       </div>
                     </td>
+
+                    {/* Current gameweek points — live while the round runs */}
+                    {(() => {
+                      const gwPts = p.scores[currentGW - 1];
+                      return (
+                        <td className="py-3 px-2 sm:px-3 text-center font-mono font-black text-xs sm:text-sm border-r"
+                          style={{
+                            color: gwPts === null || gwPts === undefined
+                              ? 'var(--text-faint)'
+                              : isLive ? '#ff2d55' : 'var(--accent-secondary)',
+                            borderColor: 'var(--border-subtle)'
+                          }}
+                        >
+                          <SquadPopupWrap live={live} gw={currentGW} managerId={p.id}>
+                            <span className="cursor-help">{gwPts === null || gwPts === undefined ? '-' : gwPts}</span>
+                          </SquadPopupWrap>
+                        </td>
+                      );
+                    })()}
 
                     {/* Total Points */}
                     <td className="py-3 px-3 text-center font-mono font-black text-xs sm:text-sm border-r"

@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Trophy, Swords, Award, Users, Info } from 'lucide-react';
-import { MonthlyAward, ClassicStanding, H2HStanding } from '../types';
+import { MonthlyAward, ClassicStanding, H2HStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { MONTH_RANGES, INITIAL_PLAYERS, getH2HMatchupsForGW } from '../data/initialData';
 import { MonthRange } from '../services/liveStandings';
+import { SquadPopupWrap } from './SquadTooltip';
 
 interface MonthlyAwardsProps {
   awards: MonthlyAward[];
   classicStandings?: ClassicStanding[];
   h2hStandings?: H2HStanding[];
   currentMonthName?: string;
+  currentGW?: number;
   isLive?: boolean;
+  live?: LiveGwData | null;
   months?: MonthRange[];
   onSelectPlayer?: (id: number) => void;
 }
@@ -19,7 +22,9 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
   awards,
   classicStandings = [],
   currentMonthName,
+  currentGW = 1,
   isLive = false,
+  live = null,
   months = MONTH_RANGES,
   onSelectPlayer,
 }) => {
@@ -499,8 +504,14 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
 
                         {/* GW Points Breakdown */}
                         {p.gwBreakdown.map(({ gw, score }) => (
-                          <td key={gw} className="py-3 px-3 text-center font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                            {score !== null ? score : '-'}
+                          <td key={gw} className="py-3 px-3 text-center font-mono text-[11px]"
+                            style={{ color: gw === currentGW && isLive ? '#ff2d55' : 'var(--text-muted)' }}
+                          >
+                            <SquadPopupWrap live={live} gw={gw} managerId={p.id}>
+                              <span className={gw === currentGW && isLive ? 'font-black cursor-help' : ''}>
+                                {score !== null ? score : '-'}
+                              </span>
+                            </SquadPopupWrap>
                           </td>
                         ))}
 
