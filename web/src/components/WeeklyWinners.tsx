@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Zap, Trophy, Award, CheckCircle2, Clock, ChevronLeft, ChevronRight, Users } from 'lucide-react';
-import { WeeklyWinner, ClassicStanding } from '../types';
+import { WeeklyWinner, ClassicStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
+import { SquadTooltip } from './SquadTooltip';
 import { shareAmount } from '../services/prizes';
 
 interface WeeklyWinnersProps {
@@ -9,6 +10,7 @@ interface WeeklyWinnersProps {
   classicStandings?: ClassicStanding[];
   currentGW?: number | string;
   isLive?: boolean;
+  live?: LiveGwData | null;
   onSelectPlayer?: (id: number) => void;
 }
 
@@ -17,6 +19,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
   classicStandings = [],
   currentGW = 1,
   isLive = false,
+  live = null,
   onSelectPlayer,
 }) => {
   const activeGWNumber = typeof currentGW === 'number' ? currentGW : 1;
@@ -52,6 +55,14 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
       hasPlayed: pts !== null,
     };
   }).sort((a, b) => b.points - a.points);
+
+  // Captain picks come from the live payload, so they exist for the gameweek
+  // in progress; older gameweeks simply show a dash.
+  const liveById = new Map((live?.scores || []).map(s => [s.id, s]));
+  const captainOf = (id: number) => {
+    const row = liveById.get(id);
+    return live && live.gw === selectedGW && row?.captain ? row.captain : null;
+  };
 
   const top1Score = roundRankings[0]?.points || 0;
   const isPlayed = roundRankings[0]?.hasPlayed;
@@ -290,7 +301,11 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                 >
                   HLV & Đội Bóng
                 </th>
-                <th className="py-2.5 sm:py-3 px-3 text-center min-w-[80px]">Điểm GW{selectedGW}</th>
+                <th className="py-2.5 sm:py-3 px-3 text-center min-w-[80px]">
+                  Điểm GW{selectedGW}{isLive && selectedGW === activeGWNumber ? ' ⚡' : ''}
+                </th>
+                <th className="py-2.5 sm:py-3 px-3 text-left min-w-[105px]">Captain</th>
+                <th className="py-2.5 sm:py-3 px-3 text-center min-w-[70px]">Điểm C</th>
                 <th className="py-2.5 sm:py-3 px-3 sm:px-4 text-right min-w-[110px]">Thưởng Nhất Tuần</th>
               </tr>
             </thead>
@@ -344,7 +359,46 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                     </td>
 
                     <td className="py-2.5 sm:py-3 px-3 text-center font-mono font-black text-xs sm:text-sm" style={{ color: 'var(--accent-primary)' }}>
-                      {p.hasPlayed ? p.points : '-'} <span className="text-[9px] sm:text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>pts</span>
+                      {(() => {
+                        const cell = (
+                          <span className="cursor-help">
+                            {p.hasPlayed ? p.points : '-'} <span className="text-[9px] sm:text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>pts</span>
+                          </span>
+                        );
+                        const liveRow = liveById.get(p.id);
+                        // Hovering the points opens the whole squad with live
+                        // player points while the gameweek is running.
+                        return live && live.gw === selectedGW && liveRow?.squad?.length ? (
+                          <SquadTooltip score={liveRow} gw={selectedGW}>{cell}</SquadTooltip>
+                        ) : cell;
+                      })()}
+                    </td>
+
+                    <td className="py-2.5 sm:py-3 px-3 text-left">
+                      {(() => {
+                        const cap = captainOf(p.id);
+                        if (!cap) return <span className="text-xs font-mono" style={{ color: 'var(--text-faint)' }}>-</span>;
+                        return (
+                          <span className="inline-flex items-center gap-1.5 min-w-0">
+                            <span className="text-[8px] font-black px-1 py-0.5 rounded flex-shrink-0"
+                              style={{ backgroundColor: cap.mult === 3 ? '#04f5ff' : '#ff2d55', color: cap.mult === 3 ? '#000' : '#fff' }}>
+                              {cap.mult === 3 ? 'TC' : 'C'}
+                            </span>
+                            <span className="text-[11px] sm:text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                              {cap.name}
+                            </span>
+                            <span className="text-[8px] font-mono flex-shrink-0" style={{ color: 'var(--text-faint)' }}>{cap.team}</span>
+                          </span>
+                        );
+                      })()}
+                    </td>
+
+                    <td className="py-2.5 sm:py-3 px-3 text-center font-mono font-black text-xs sm:text-sm"
+                      style={{ color: captainOf(p.id) ? 'var(--text-main)' : 'var(--text-faint)' }}>
+                      {(() => {
+                        const cap = captainOf(p.id);
+                        return cap ? cap.pts * cap.mult : '-';
+                      })()}
                     </td>
 
                     <td className="py-2.5 px-4 text-right font-mono font-bold text-xs">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trophy, Swords } from 'lucide-react';
+import { X, Trophy, Swords, ExternalLink } from 'lucide-react';
 import { ClassicStanding, H2HStanding } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { INITIAL_PLAYERS } from '../data/initialData';
@@ -9,6 +9,8 @@ interface ManagerModalProps {
   onClose: () => void;
   classicStandings: ClassicStanding[];
   h2hStandings: H2HStanding[];
+  /** Gameweek to deep-link into on the official FPL site. */
+  currentGW?: number;
 }
 
 export const ManagerModal: React.FC<ManagerModalProps> = ({
@@ -16,6 +18,7 @@ export const ManagerModal: React.FC<ManagerModalProps> = ({
   onClose,
   classicStandings,
   h2hStandings,
+  currentGW = 1,
 }) => {
   if (!playerId) return null;
 
@@ -131,6 +134,23 @@ export const ManagerModal: React.FC<ManagerModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Official FPL squad link for the gameweek in play */}
+        <a
+          href={`https://fantasy.premierleague.com/en/entry/${playerId}/event/${currentGW}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="interactive flex items-center justify-center gap-2 w-full mb-4 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md border"
+          style={{
+            backgroundColor: 'rgba(4, 245, 255, 0.12)',
+            borderColor: 'rgba(4, 245, 255, 0.4)',
+            color: 'var(--accent-secondary)'
+          }}
+        >
+          <ExternalLink className="w-4 h-4" />
+          Xem Đội Hình GW{currentGW} Trên FPL
+        </a>
 
         {/* Footer Info */}
         <div className="flex items-center justify-end pt-2 text-xs font-mono">

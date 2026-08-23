@@ -26,7 +26,10 @@ function getGameweekPicks_(gw, forceRefresh) {
     const stored = getStateProperty_(propKey, "");
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        // v2 rows are [element, multiplier, slot, isVice]. Older rows without
+        // the slot cannot back the squad view, so refetch once and re-store.
+        if (parsed && parsed.v === 2) return parsed;
       } catch (e) { /* corrupt value — refetch below */ }
     }
     // Squads are published a few minutes after the deadline. Without this
@@ -35,7 +38,7 @@ function getGameweekPicks_(gw, forceRefresh) {
   }
 
   const players = getActivePlayers();
-  const picks = {};
+  const picks = { v: 2 };
   let complete = true;
 
   for (const player of players) {
@@ -46,13 +49,15 @@ function getGameweekPicks_(gw, forceRefresh) {
       continue;
     }
     picks[player.id] = {
-      p: data.picks.map(function (pick) { return [pick.element, pick.multiplier]; }),
+      p: data.picks.map(function (pick) {
+        return [pick.element, pick.multiplier, pick.position, pick.is_vice_captain ? 1 : 0];
+      }),
       c: (data.entry_history && data.entry_history.event_transfers_cost) || 0,
       chip: data.active_chip || ""
     };
   }
 
-  if (!complete || Object.keys(picks).length === 0) {
+  if (!complete || Object.keys(picks).length <= 1) {
     cache.put("picks_pending_gw" + gw, "1", 300);
     return null;
   }
@@ -60,12 +65,16 @@ function getGameweekPicks_(gw, forceRefresh) {
   const serialised = JSON.stringify(picks);
   // Script properties cap at 9KB per value; skip persisting an oversized blob
   // rather than throwing — the picks will simply be refetched next time.
-  if (serialised.length < 8000) {
+  if (serialised.length < 9000) {
     setStateProperty_(propKey, serialised);
     // Only the current gameweek is ever replayed, so drop the previous one to
     // keep well clear of the 500KB property store limit.
     PropertiesService.getScriptProperties().deleteProperty("picks_gw" + (gw - 1));
     PropertiesService.getScriptProperties().deleteProperty("h2hfix_gw" + (gw - 1));
+  } else {
+    // Too big to persist — keep serving it from the script cache instead so
+    // the next poll within the hour does not refetch all managers.
+    try { cache.put(propKey, serialised, 3600); } catch (e2) { /* oversized */ }
   }
   return picks;
 }
@@ -101,9 +110,10 @@ function getGameweekH2HFixtures_(gw) {
  * Auto-substitutions are only applied by FPL once the gameweek finishes, so
  * in-play totals here match what the official FPL app shows live.
  *
- * @return {Array<{id: number, manager: string, team: string, livePoints: number,
- *                 netPoints: number, transferCost: number, playersPlayed: number,
- *                 playersRemaining: number, chip: string}>}
+ * Alongside the totals, each row carries the captain pick and the full squad
+ * with per-player points so the website can show them on hover.
+ *
+ * @return {Array} one row per manager
  */
 function computeLiveGameweek_(gw) {
   const picks = getGameweekPicks_(gw);
@@ -112,7 +122,7 @@ function computeLiveGameweek_(gw) {
   const live = fetchEventLive(gw);
   if (!live || !live.elements || !live.elements.length) return [];
 
-  // element id → { points, minutes, started }
+  // element id → { points, minutes }
   const elementStats = {};
   for (const element of live.elements) {
     const stats = element.stats || {};
@@ -122,6 +132,8 @@ function computeLiveGameweek_(gw) {
     };
   }
 
+  const meta = getElementMeta_();
+
   const results = [];
   for (const player of getActivePlayers()) {
     const entry = picks[player.id];
@@ -130,18 +142,40 @@ function computeLiveGameweek_(gw) {
     let livePoints = 0;
     let playersPlayed = 0;
     let playersRemaining = 0;
+    let captain = null;
+    const squad = [];
 
-    for (const pick of entry.p) {
+    // Picks arrive sorted by slot; keep that order for the squad view.
+    const ordered = entry.p.slice().sort(function (a, b) { return a[2] - b[2]; });
+
+    for (const pick of ordered) {
       const elementId = pick[0];
       const multiplier = pick[1];
-      const stats = elementStats[elementId];
-      if (!stats) continue;
+      const slot = pick[2];
+      const isVice = pick[3] === 1;
+      const stats = elementStats[elementId] || { points: 0, minutes: 0 };
+      const info = meta[elementId] || { name: "#" + elementId, team: "", pos: 0 };
 
       livePoints += stats.points * multiplier;
       if (multiplier > 0) {
         if (stats.minutes > 0) playersPlayed++;
         else playersRemaining++;
       }
+      if (multiplier >= 2) {
+        captain = { id: elementId, name: info.name, team: info.team, pts: stats.points, mult: multiplier };
+      }
+
+      squad.push({
+        id: elementId,
+        name: info.name,
+        team: info.team,
+        pos: info.pos,
+        slot: slot,
+        mult: multiplier,
+        pts: stats.points,
+        mins: stats.minutes,
+        vice: isVice
+      });
     }
 
     results.push({
@@ -153,7 +187,9 @@ function computeLiveGameweek_(gw) {
       transferCost: entry.c,
       playersPlayed: playersPlayed,
       playersRemaining: playersRemaining,
-      chip: entry.chip || ""
+      chip: entry.chip || "",
+      captain: captain,
+      squad: squad
     });
   }
 

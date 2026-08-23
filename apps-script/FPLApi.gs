@@ -174,6 +174,46 @@ function getSeasonState(forceRefresh) {
 }
 
 /**
+ * Compact player metadata map from the same bootstrap payload the season
+ * state is built from: element id → { name, team, pos }.
+ *
+ * Needed to render squad details (captain, hover popup) without shipping the
+ * whole 1.4 MB bootstrap to the website. Cached 6h — squads do not change
+ * mid-gameweek.
+ *
+ * @return {Object} element id → { name: web_name, team: short_code, pos: 1-4 }
+ */
+function getElementMeta_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("element_map");
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) { /* rebuild below */ }
+  }
+
+  const bootstrap = fetchBootstrap();
+  if (!bootstrap || !bootstrap.elements) return {};
+
+  const teamShort = {};
+  for (const team of (bootstrap.teams || [])) teamShort[team.id] = team.short_name;
+
+  const map = {};
+  for (const element of bootstrap.elements) {
+    map[element.id] = {
+      name: element.web_name,
+      team: teamShort[element.team] || "",
+      pos: element.element_type
+    };
+  }
+
+  try {
+    cache.put("element_map", JSON.stringify(map), 21600); // 6h
+  } catch (e) { /* too large — rebuild next time */ }
+  return map;
+}
+
+/**
  * Gets the gameweek whose data should currently be written/displayed.
  * @return {number|null} null only when bootstrap is unreachable
  */

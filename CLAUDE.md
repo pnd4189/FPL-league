@@ -74,6 +74,9 @@ Read responses are cached 5 min under a generation token; `refreshFPLAll()` bump
 - Manager prize earnings leaderboard in Giải Thưởng tab
 - Fan club branding and real avatar photos for all 14 managers (Shark Tú, Shark Lâm, Hải, Tân, etc.)
 - Frontend live at https://htcv-fpl.vercel.app (Vercel project `htcv-fpl`, already linked via `web/.vercel`)
+- Captain pick + captain points columns in Nhất Tuần (live GW only, from `?action=live`)
+- Squad hover popup on GW points (fplgames-style: starters green, bench grey, C/VC badges) — `web/src/components/SquadTooltip.tsx`
+- Manager modal links to the official squad: `fantasy.premierleague.com/en/entry/{id}/event/{gw}`
 
 ### 🔲 Remaining
 - End-of-season: Cup bracket activation after GW35

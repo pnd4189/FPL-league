@@ -144,6 +144,28 @@ export interface LeagueDashboardData {
   };
 }
 
+/** One player (footballer) inside a manager's live squad. */
+export interface SquadPlayer {
+  id: number;
+  name: string;
+  team: string;
+  pos: number;   // 1 GK, 2 DEF, 3 MID, 4 FWD
+  slot: number;  // 1-11 starters, 12-15 bench
+  mult: number;  // 0 bench, 1 starter, 2 captain, 3 triple captain
+  pts: number;
+  mins: number;
+  vice: boolean;
+}
+
+/** The captain pick of a manager's live squad. */
+export interface LiveCaptain {
+  id: number;
+  name: string;
+  team: string;
+  pts: number;   // raw live points, before the captain multiplier
+  mult: number;  // 2 or 3
+}
+
 /** One manager's provisional points for the gameweek currently in progress. */
 export interface LiveScore {
   id: number;
@@ -155,6 +177,8 @@ export interface LiveScore {
   playersPlayed: number;
   playersRemaining: number;
   chip: string;
+  captain?: LiveCaptain | null;
+  squad?: SquadPlayer[];
 }
 
 /** One provisional head-to-head fixture of the gameweek in progress. */

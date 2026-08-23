@@ -311,6 +311,7 @@ export const App: React.FC = () => {
             classicStandings={liveClassicStandings}
             currentGW={currentGW}
             isLive={isLiveNow}
+            live={live}
             onSelectPlayer={(id) => setSelectedPlayerId(id)}
           />
         )}
@@ -349,6 +350,7 @@ export const App: React.FC = () => {
         onClose={() => setSelectedPlayerId(null)}
         classicStandings={liveClassicStandings}
         h2hStandings={liveH2HStandings}
+        currentGW={currentGW}
       />
 
       {/* Footer (with pb-20 on mobile to clear mobile bottom navigation bar) */}
