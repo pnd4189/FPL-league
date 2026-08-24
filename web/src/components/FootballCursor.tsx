@@ -26,6 +26,29 @@ const SPRITE_SCALE = SPRITE_SIZE / (SPRITE_BALL_RADIUS * 2);
 
 type GlowColor = 'green' | 'cyan';
 
+// Soft neon comet trail: recent cursor positions stamped with a pre-rendered
+// radial glow and faded by age. Same sprite economics as the ball itself —
+// one drawImage per point, no per-frame gradients or shadows.
+const TRAIL_POINTS = 14;
+const TRAIL_MS = 420;
+
+/** Bake a soft radial glow blob once; tinted green or cyan. */
+function buildGlowSprite(glow: GlowColor): HTMLCanvasElement {
+  const sprite = document.createElement('canvas');
+  sprite.width = sprite.height = 64;
+  const ctx = sprite.getContext('2d');
+  if (!ctx) return sprite;
+
+  const [r, g, b] = glow === 'green' ? [0, 255, 135] : [4, 245, 255];
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, `rgba(${r},${g},${b},0.55)`);
+  grad.addColorStop(0.45, `rgba(${r},${g},${b},0.18)`);
+  grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  return sprite;
+}
+
 /**
  * Render the soccer ball once into an offscreen canvas: sphere shading,
  * pentagon, seams, corner patches, gloss, drop shadow and (optionally) the
@@ -206,6 +229,8 @@ export const FootballCursor: React.FC = () => {
     const ballSprite = buildBallSprite();
     const greenSprite = buildBallSprite('green');
     const cyanSprite = buildBallSprite('cyan');
+    const glowGreen = buildGlowSprite('green');
+    const glowCyan = buildGlowSprite('cyan');
     const spriteFor = (glow?: string) =>
       glow === '#00ff87' ? greenSprite : glow === '#04f5ff' ? cyanSprite : ballSprite;
 
@@ -237,6 +262,7 @@ export const FootballCursor: React.FC = () => {
 
     const trailingBalls: SpinningBall[] = [];
     const maxTrailingBalls = 10;
+    const trailHistory: { x: number; y: number; t: number }[] = [];
 
     const handleMouseMove = (e: MouseEvent) => {
       mouse.prevX = mouse.x;
@@ -251,6 +277,10 @@ export const FootballCursor: React.FC = () => {
       // Rotate ball proportional to movement speed
       mouse.ballAngle += mouse.speed * 0.09;
 
+      // Comet trail samples every movement; pruned by age at render time.
+      trailHistory.push({ x: mouse.x, y: mouse.y, t: performance.now() });
+      if (trailHistory.length > TRAIL_POINTS) trailHistory.shift();
+
       // Spawn subtle spinning mini football particles only on active fast movement
       if (mouse.speed > 2.5) {
         if (trailingBalls.length < maxTrailingBalls && Math.random() > 0.4) {
@@ -260,7 +290,7 @@ export const FootballCursor: React.FC = () => {
             vx: -mouse.vx * 0.08 + (Math.random() - 0.5) * 0.4,
             vy: -mouse.vy * 0.08 + (Math.random() - 0.5) * 0.4,
             // Compact & uniform radius for trailing balls
-            radius: Math.min(3.2, Math.max(1.5, mouse.speed * 0.08 + Math.random() * 0.8)),
+            radius: Math.min(4.6, Math.max(2.0, mouse.speed * 0.11 + Math.random() * 0.9)),
             alpha: 0.7,
             decay: Math.random() * 0.045 + 0.035,
             angle: mouse.ballAngle + (Math.random() - 0.5),
@@ -337,8 +367,12 @@ export const FootballCursor: React.FC = () => {
         Math.abs(mouse.y - drawn.y) > 0.01 ||
         Math.abs(mouse.ballAngle - drawn.angle) > 0.001;
       const scaling = Math.abs(mouse.targetScale - mouse.scale) > 0.001;
+      // Keep drawing while any comet glow is still on screen.
+      const now = performance.now();
+      while (trailHistory.length && now - trailHistory[0].t >= TRAIL_MS) trailHistory.shift();
+      const trailAlive = trailHistory.length > 0;
 
-      if (!particlesAlive && !moved && !scaling) {
+      if (!particlesAlive && !moved && !scaling && !trailAlive) {
         // Nothing to draw that is not already on the canvas — park the loop
         // until the next mouse event wakes it.
         running = false;
@@ -352,13 +386,30 @@ export const FootballCursor: React.FC = () => {
         stampBall(ctx, spriteFor(ball.glowColor), ball.x, ball.y, ball.radius, ball.angle, ball.alpha);
       }
 
-      // 2. Main Football Cursor (Ultra-sleek compact size: ~5.2px radius)
+      // 2. Neon comet trail behind recent cursor positions
+      for (let i = 0; i < trailHistory.length; i++) {
+        const p = trailHistory[i];
+        const age = now - p.t;
+        if (age >= TRAIL_MS) continue;
+        const recency = 1 - age / TRAIL_MS; // 1 = newest
+        stampBall(
+          ctx,
+          i % 2 === 0 ? glowGreen : glowCyan,
+          p.x,
+          p.y,
+          4 + 10 * recency,          // grows toward the cursor
+          0,
+          0.38 * recency * recency   // eases out softly
+        );
+      }
+
+      // 3. Main Football Cursor (~9px radius reads clearly as a pointer)
       stampBall(
         ctx,
         mouse.isHovering ? greenSprite : ballSprite,
         mouse.x,
         mouse.y,
-        5.2 * mouse.scale,
+        9 * mouse.scale,
         mouse.ballAngle,
         1
       );
