@@ -35,6 +35,8 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 - **Frontend:** React + TypeScript. No external UI libraries beyond lucide-react icons.
 - **Data sync:** settled data via 6h trigger + hourly settlement check + manual button. Page open does NOT run a full refresh — it polls `?action=live` instead.
 - **Live scoring:** standings must move during a gameweek. Live points come from `event/{gw}/live/` + cached squad picks; the website merges them onto the settled tables (`web/src/services/liveStandings.ts`). Never write live data to the Sheet.
+- **Auto-substitutions:** once every match of the GW has finished, FPL rewrites `entry/{id}/event/{gw}/picks/` into the effective (subs applied) lineup. The backend detects "matches complete" and refetches picks once (throttled) so live scores equal the official ones. GW1-verified: DaddyCool 54 (not 52), 5 managers affected.
+- **H2H GA:** the standings api never returns `points_against` — derive GA from the stored match rows. The display GW's matches are always refetched (points go provisional→final); older settled GWs reuse stored rows.
 - **Month→GW map:** derived from real FPL deadlines at runtime (`getMonthGwMap()`). Do NOT hardcode; the 2026-27 calendar is Aug GW1-2, Sep GW3-5, Oct GW6-9, Nov GW10-12, Dec GW13-18, Jan GW19-23, Feb GW24-27, Mar GW28-30, Apr GW31-33, May GW34-38.
 - **Sheet columns owned by humans** (`Đã trả?`, `Ngày`, `Đã trả Classic/H2H?`) must be read back and preserved on every refresh.
 - **Simple triggers (onEdit):** Must use `getActiveSpreadsheet()`, NOT `openById()`.

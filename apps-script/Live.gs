@@ -23,13 +23,19 @@ function getGameweekPicks_(gw, forceRefresh) {
   const cache = CacheService.getScriptCache();
 
   if (!forceRefresh) {
-    const stored = getStateProperty_(propKey, "");
+    let stored = getStateProperty_(propKey, "");
+    if (!stored) {
+      // An oversized store fell back to the script cache; honour it so the
+      // next poll does not refetch every manager.
+      const cached = cache.get(propKey);
+      if (cached) stored = cached;
+    }
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // v2 rows are [element, multiplier, slot, isVice]. Older rows without
-        // the slot cannot back the squad view, so refetch once and re-store.
-        if (parsed && parsed.v === 2) return parsed;
+        // v3 rows carry the auto-substituted lineup FPL publishes once the
+        // gameweek's matches finish; older stores must be refetched.
+        if (parsed && parsed.v === 3) return parsed;
       } catch (e) { /* corrupt value — refetch below */ }
     }
     // Squads are published a few minutes after the deadline. Without this
@@ -38,7 +44,7 @@ function getGameweekPicks_(gw, forceRefresh) {
   }
 
   const players = getActivePlayers();
-  const picks = { v: 2 };
+  const picks = { v: 3 };
   let complete = true;
 
   for (const player of players) {
@@ -53,7 +59,14 @@ function getGameweekPicks_(gw, forceRefresh) {
         return [pick.element, pick.multiplier, pick.position, pick.is_vice_captain ? 1 : 0];
       }),
       c: (data.entry_history && data.entry_history.event_transfers_cost) || 0,
-      chip: data.active_chip || ""
+      chip: data.active_chip || "",
+      // Once every match of the gameweek has finished, FPL rewrites the picks
+      // into the effective (auto-substitutions applied) lineup and reports
+      // them here. The official score is entry_history.points.
+      subs: data.automatic_subs || [],
+      hp: data.entry_history && data.entry_history.points !== undefined
+        ? data.entry_history.points
+        : null
     };
   }
 
@@ -62,9 +75,17 @@ function getGameweekPicks_(gw, forceRefresh) {
     return null;
   }
 
+  // Any substitution in the league means FPL has published the effective
+  // lineups — they never change again, so this store is final.
+  picks.subsDone = false;
+  for (const key of Object.keys(picks)) {
+    if (key === "v" || key === "subsDone") continue;
+    if (picks[key].subs && picks[key].subs.length) { picks.subsDone = true; break; }
+  }
+
   const serialised = JSON.stringify(picks);
-  // Script properties cap at 9KB per value; skip persisting an oversized blob
-  // rather than throwing — the picks will simply be refetched next time.
+  // Script properties cap at 9KB per value; fall back to the script cache so
+  // the next poll does not refetch every manager.
   if (serialised.length < 9000) {
     setStateProperty_(propKey, serialised);
     // Only the current gameweek is ever replayed, so drop the previous one to
@@ -72,11 +93,31 @@ function getGameweekPicks_(gw, forceRefresh) {
     PropertiesService.getScriptProperties().deleteProperty("picks_gw" + (gw - 1));
     PropertiesService.getScriptProperties().deleteProperty("h2hfix_gw" + (gw - 1));
   } else {
-    // Too big to persist — keep serving it from the script cache instead so
-    // the next poll within the hour does not refetch all managers.
-    try { cache.put(propKey, serialised, 3600); } catch (e2) { /* oversized */ }
+    try { cache.put(propKey, serialised, 21600); } catch (e2) { /* oversized */ }
   }
   return picks;
+}
+
+/**
+ * Once every match of the gameweek has finished — but before FPL finalises
+ * the gameweek — the picks endpoint starts serving the auto-substituted
+ * lineups. Refresh the picks once (throttled) so the live scores match the
+ * official ones instead of replaying the pre-deadline lineup forever.
+ */
+function refreshSubsIfComplete_(gw) {
+  const cache = CacheService.getScriptCache();
+  if (cache.get("subs_try_gw" + gw)) return;
+
+  const stored = getStateProperty_("picks_gw" + gw, "");
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed && parsed.v === 3 && parsed.subsDone) return;
+    } catch (e) { /* refetch below */ }
+  }
+
+  cache.put("subs_try_gw" + gw, "1", 300);
+  getGameweekPicks_(gw, true);
 }
 
 /**
@@ -188,6 +229,7 @@ function computeLiveGameweek_(gw) {
       playersPlayed: playersPlayed,
       playersRemaining: playersRemaining,
       chip: entry.chip || "",
+      subs: (entry.subs && entry.subs.length) || 0,
       captain: captain,
       squad: squad
     });
@@ -332,7 +374,11 @@ function getLiveData(forceRefresh) {
     return empty;
   }
 
-  const inPlay = isGameweekInPlay(gw);
+  const play = getGameweekPlayState_(gw);
+  const inPlay = play.started && !play.complete;
+  // Matches finished: pull the official auto-substituted lineups once so the
+  // provisional scores equal what the FPL site shows.
+  if (state.isLive && play.complete) refreshSubsIfComplete_(gw);
   const scores = computeLiveGameweek_(gw);
   const payload = {
     status: "success",
@@ -342,8 +388,9 @@ function getLiveData(forceRefresh) {
       isPreSeason: false,
       finishedGws: state.finishedGws,
       inPlay: inPlay,
-      // FPL only applies auto-subs at gameweek finalisation.
-      autoSubsApplied: !state.isLive,
+      // Auto-subs apply once every match has finished (or the gameweek is
+      // finalised); the flag tells the site which score it is looking at.
+      autoSubsApplied: !state.isLive || scores.some(function (row) { return row.subs > 0; }),
       settlementPending: settlementPending,
       updatedAt: new Date().toISOString(),
       scores: scores,

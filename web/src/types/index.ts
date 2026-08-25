@@ -189,6 +189,8 @@ export interface LiveScore {
   playersPlayed: number;
   playersRemaining: number;
   chip: string;
+  /** Automatic substitutions applied by FPL for this manager. */
+  subs?: number;
   captain?: LiveCaptain | null;
   squad?: SquadPlayer[];
 }

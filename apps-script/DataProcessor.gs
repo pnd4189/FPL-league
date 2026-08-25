@@ -112,7 +112,12 @@ function refreshH2HMatches() {
   let fetchedGws = 0;
 
   for (let gw = 1; gw <= currentGw; gw++) {
-    if (finishedGwIds[gw] && storedByGw[gw] && storedByGw[gw].length > 0) {
+    // The display gameweek is always refetched: its points move from
+    // provisional to final (auto-substitutions, data corrections) until FPL
+    // finalises it. Older settled gameweeks never change, so reuse them.
+    const reuseStored =
+      gw < currentGw && finishedGwIds[gw] && storedByGw[gw] && storedByGw[gw].length > 0;
+    if (reuseStored) {
       for (const row of storedByGw[gw]) allMatches.push(row);
       continue;
     }
@@ -249,13 +254,31 @@ function updateH2HStandings() {
   }
 
   const results = data.standings.results;
+
+  // The standings payload never includes points_against, so derive each
+  // manager's GA from the stored match rows (every opponent score against
+  // them), which also keeps GD honest.
+  const matchesSheet = getSheet("LichThiDauLeague");
+  const matchesData = matchesSheet ? matchesSheet.getDataRange().getValues() : [];
+  const againstByEntry = {};
+  for (let i = 1; i < matchesData.length; i++) {
+    const homeId = String(matchesData[i][11]);
+    const awayId = String(matchesData[i][12]);
+    const homePts = Number(matchesData[i][3]) || 0;
+    const awayPts = Number(matchesData[i][6]) || 0;
+    if (homeId) againstByEntry[homeId] = (againstByEntry[homeId] || 0) + awayPts;
+    if (awayId) againstByEntry[awayId] = (againstByEntry[awayId] || 0) + homePts;
+  }
+
   const writeData = [];
 
   for (const r of results) {
     // points_against is absent from the payload until matches are played;
     // writing it raw left the GA column blank and GD as #NUM!.
     const gf = r.points_for || 0;
-    const ga = r.points_against || 0;
+    const ga = againstByEntry[String(r.entry)] !== undefined
+      ? againstByEntry[String(r.entry)]
+      : (r.points_against || 0);
     writeData.push([
       0, // rank assigned below
       // The API returns the real FPL account name ("Dung Pham"); the website

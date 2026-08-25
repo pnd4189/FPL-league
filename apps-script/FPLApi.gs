@@ -228,12 +228,13 @@ function getCurrentGameweek() {
 }
 
 /**
- * True when at least one fixture of the gameweek has kicked off and not all of
- * them are finished — the window where live polling is worth the API call.
+ * Fixture state of a gameweek: whether any match has kicked off, and whether
+ * every match has finished. "Complete but not finalised" is the window where
+ * FPL has already applied automatic substitutions to the picks endpoint.
  */
-function isGameweekInPlay(gw) {
+function getGameweekPlayState_(gw) {
   const fixtures = fetchFixtures(gw);
-  if (!fixtures || !fixtures.length) return false;
+  if (!fixtures || !fixtures.length) return { started: false, complete: false };
 
   let started = false;
   let allFinished = true;
@@ -241,5 +242,14 @@ function isGameweekInPlay(gw) {
     if (fixture.started) started = true;
     if (!fixture.finished_provisional) allFinished = false;
   }
-  return started && !allFinished;
+  return { started: started, complete: started && allFinished };
+}
+
+/**
+ * True while matches of the gameweek are running — the window where live
+ * polling is worth the API call.
+ */
+function isGameweekInPlay(gw) {
+  const state = getGameweekPlayState_(gw);
+  return state.started && !state.complete;
 }
