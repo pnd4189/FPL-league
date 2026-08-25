@@ -252,8 +252,12 @@ function updateH2HStandings() {
   const writeData = [];
 
   for (const r of results) {
+    // points_against is absent from the payload until matches are played;
+    // writing it raw left the GA column blank and GD as #NUM!.
+    const gf = r.points_for || 0;
+    const ga = r.points_against || 0;
     writeData.push([
-      r.rank,
+      0, // rank assigned below
       // The API returns the real FPL account name ("Dung Pham"); the website
       // matches rows by league nickname, so translate it here.
       getManagerName(r.entry, r.player_name),
@@ -261,12 +265,28 @@ function updateH2HStandings() {
       r.matches_won,
       r.matches_drawn,
       r.matches_lost,
-      r.points_for,
-      r.points_against,
-      r.points_for - r.points_against,
+      gf,
+      ga,
+      gf - ga,
       r.total,
-      r.points_for  // Classic Total (approx, can be overridden)
+      gf  // Classic Total (approx, can be overridden)
     ]);
+  }
+
+  // League ranking rule: points, then goal difference, then goals for —
+  // the FPL api orders by its own tiebreak, which is not what this league
+  // plays by.
+  writeData.sort(function (a, b) {
+    return (b[9] - a[9]) || (b[8] - a[8]) || (b[6] - a[6]);
+  });
+  let rank = 0;
+  let previousKey = null;
+  for (let i = 0; i < writeData.length; i++) {
+    const row = writeData[i];
+    const key = row[9] + "|" + row[8] + "|" + row[6];
+    if (key !== previousKey) rank = i + 1;
+    row[0] = rank;
+    previousKey = key;
   }
 
   if (writeData.length > 0) {

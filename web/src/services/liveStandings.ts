@@ -68,7 +68,7 @@ function rerank(rows: ClassicStanding[]): ClassicStanding[] {
  * would double-count.
  */
 export function mergeLiveH2H(standings: H2HStanding[], live: LiveGwData | null): H2HStanding[] {
-  if (!live || !live.isLive || !live.h2h.length) return standings;
+  if (!live || !live.isLive || !live.h2h.length) return rankH2HStandings(standings);
 
   const delta = new Map<number, { pts: number; for: number; against: number; w: number; d: number; l: number }>();
   const record = (id: number, own: number, opponent: number, h2hPts: number) => {
@@ -106,9 +106,26 @@ export function mergeLiveH2H(standings: H2HStanding[], live: LiveGwData | null):
     };
   });
 
-  // FPL ranks H2H on points, then points-for as the tiebreak.
-  const sorted = merged.sort((a, b) => b.points - a.points || b.pointsFor - a.pointsFor);
-  return sorted.map((row, i) => ({ ...row, rank: i + 1 }));
+  return rankH2HStandings(merged);
+}
+
+/**
+ * League ranking rule: points, then goal difference, then goals for. Equal on
+ * all three shares a rank. Applied to settled tables too, because the FPL api
+ * orders rows by its own tiebreak instead of this league's.
+ */
+export function rankH2HStandings(rows: H2HStanding[]): H2HStanding[] {
+  const sorted = rows.slice().sort(
+    (a, b) => b.points - a.points || b.goalDifference - a.goalDifference || b.pointsFor - a.pointsFor,
+  );
+  let rank = 0;
+  let previousKey: string | null = null;
+  return sorted.map((row, i) => {
+    const key = `${row.points}|${row.goalDifference}|${row.pointsFor}`;
+    if (key !== previousKey) rank = i + 1;
+    previousKey = key;
+    return rank === row.rank ? row : { ...row, rank };
+  });
 }
 
 /** The month bucket containing a gameweek, defaulting to the first month. */
