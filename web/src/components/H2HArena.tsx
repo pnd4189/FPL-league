@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Swords, Trophy, ChevronLeft, ChevronRight, Crown } from 'lucide-react';
-import { H2HStanding, H2HMatch, LiveGwData } from '../types';
+import { H2HStanding, H2HMatch, LiveGwData, H2HScheduleRow } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
-import { INITIAL_PLAYERS, getH2HMatchupsForGW } from '../data/initialData';
+import { INITIAL_PLAYERS } from '../data/initialData';
 import { SquadPopupWrap } from './SquadTooltip';
+import { fetchH2HSchedule } from '../services/fplApi';
 
 interface H2HArenaProps {
   standings: H2HStanding[];
@@ -37,9 +38,23 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
   const teamOf = (id: number) => INITIAL_PLAYERS.find(p => p.id === id)?.team || '';
 
   /**
-   * Real fixtures with provisional scores, published by the backend for the
-   * gameweek in progress. Preferred over the generated round-robin because it
-   * is the actual FPL draw and the points move while matches are on.
+   * The league's real schedule, straight from the FPL api via the backend —
+   * the same fixtures as the official league page. A locally generated
+   * round-robin used to stand in here and showed wrong pairings with the
+   * previous gameweek's points.
+   */
+  const [schedule, setSchedule] = useState<H2HScheduleRow[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchH2HSchedule().then(rows => {
+      if (!cancelled) setSchedule(rows);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  /**
+   * Fixtures with provisional scores for the gameweek in progress, merged
+   * live so the cards move while matches are on.
    */
   const liveMatches = (): H2HMatch[] | null => {
     if (!live || live.gw !== selectedGW || !live.h2h.length) return null;
@@ -63,36 +78,40 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
             ? 'Home Win'
             : 'Away Win',
       diff: fixture.diff,
+      played: true,
     }));
   };
 
-  // Fallback: generate 7 round-robin matchups for the selected GW
-  const generateMatchups = (gw: number): H2HMatch[] => {
-    const pairings = getH2HMatchupsForGW(gw, INITIAL_PLAYERS);
-    return pairings.map((pair, idx) => {
-      const homeStanding = standings.find(s => s.id === pair.home.id);
-      const awayStanding = standings.find(s => s.id === pair.away.id);
-      return {
-        gw,
-        id: idx + 1,
-        homePlayer: pair.home.manager,
-        homeTeam: pair.home.team,
-        homePts: homeStanding ? homeStanding.pointsFor : 0,
-        homeH2HPts: homeStanding ? homeStanding.points : 0,
-        homeId: pair.home.id,
-        awayPlayer: pair.away.manager,
-        awayTeam: pair.away.team,
-        awayPts: awayStanding ? awayStanding.pointsFor : 0,
-        awayH2HPts: awayStanding ? awayStanding.points : 0,
-        awayId: pair.away.id,
-        result: 'Upcoming',
-        diff: 0,
-      };
-    });
+  /** Fixtures from the real schedule: settled gameweeks carry final points. */
+  const scheduleMatches = (): H2HMatch[] | null => {
+    if (!schedule) return null;
+    const rows = schedule.filter(r => r.gw === selectedGW);
+    if (!rows.length) return [];
+    return rows.map((r, idx) => ({
+      gw: selectedGW,
+      id: idx + 1,
+      homePlayer: INITIAL_PLAYERS.find(p => p.id === r.homeId)?.manager || `#${r.homeId}`,
+      homeTeam: teamOf(r.homeId),
+      homePts: r.homePts,
+      homeH2HPts: r.homePts > r.awayPts ? 3 : r.homePts === r.awayPts ? 1 : 0,
+      homeId: r.homeId,
+      awayPlayer: INITIAL_PLAYERS.find(p => p.id === r.awayId)?.manager || `#${r.awayId}`,
+      awayTeam: teamOf(r.awayId),
+      awayPts: r.awayPts,
+      awayH2HPts: r.awayPts > r.homePts ? 3 : r.homePts === r.awayPts ? 1 : 0,
+      awayId: r.awayId,
+      result: r.played
+        ? r.homePts === r.awayPts ? 'Draw' : r.homePts > r.awayPts ? 'Home Win' : 'Away Win'
+        : 'Upcoming',
+      diff: Math.abs(r.homePts - r.awayPts),
+      played: r.played,
+    }));
   };
 
-  const matches = liveMatches() || generateMatchups(selectedGW);
-  const showingLive = isLive && selectedGW === currentGW && !!liveMatches();
+  const liveNow = liveMatches();
+  const matches = liveNow || scheduleMatches() || [];
+  const showingLive = isLive && selectedGW === currentGW && !!liveNow;
+  const scheduleLoading = !liveNow && schedule === null;
 
   return (
     <div className="space-y-8">
@@ -176,7 +195,15 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
 
         {/* 7 Matchup Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {matches.map((m, idx) => {
+          {scheduleLoading ? (
+            <p className="text-xs font-mono col-span-full py-6 text-center" style={{ color: 'var(--text-muted)' }}>
+              ⏳ Đang tải lịch thi đấu từ FPL...
+            </p>
+          ) : matches.length === 0 ? (
+            <p className="text-xs font-mono col-span-full py-6 text-center" style={{ color: 'var(--text-muted)' }}>
+              Chưa có lịch thi đấu Gameweek {selectedGW}
+            </p>
+          ) : matches.map((m, idx) => {
             const homeP = INITIAL_PLAYERS.find(p => p.id === m.homeId);
             const awayP = INITIAL_PLAYERS.find(p => p.id === m.awayId);
 
@@ -214,7 +241,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                     style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
                   >
                     <SquadPopupWrap live={live} gw={selectedGW} managerId={m.homeId}>
-                      <span>{m.homePts > 0 ? m.homePts : '-'}</span>
+                      <span>{m.played ? m.homePts : '-'}</span>
                     </SquadPopupWrap>
                   </span>
                 </div>
@@ -244,7 +271,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                     style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
                   >
                     <SquadPopupWrap live={live} gw={selectedGW} managerId={m.awayId}>
-                      <span>{m.awayPts > 0 ? m.awayPts : '-'}</span>
+                      <span>{m.played ? m.awayPts : '-'}</span>
                     </SquadPopupWrap>
                   </span>
                 </div>

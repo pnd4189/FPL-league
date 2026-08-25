@@ -311,20 +311,3 @@ export const PRIZE_STRUCTURE = {
   ]
 };
 
-export function getH2HMatchupsForGW(gw: number, players = INITIAL_PLAYERS) {
-  const n = players.length; // 14
-  const round = (gw - 1) % (n - 1); // 0 to 12
-  const matches: { home: typeof INITIAL_PLAYERS[0]; away: typeof INITIAL_PLAYERS[0] }[] = [];
-  
-  for (let i = 0; i < n / 2; i++) {
-    let homeIdx = (round + i) % (n - 1);
-    let awayIdx = (n - 1 - i + round) % (n - 1);
-    if (i === 0) {
-      awayIdx = n - 1;
-    }
-    const homePlayer = gw % 2 === 0 ? players[homeIdx] : players[awayIdx];
-    const awayPlayer = gw % 2 === 0 ? players[awayIdx] : players[homeIdx];
-    matches.push({ home: homePlayer, away: awayPlayer });
-  }
-  return matches;
-}

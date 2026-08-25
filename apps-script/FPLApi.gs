@@ -86,6 +86,11 @@ function fetchH2HMatches(leagueId, gw) {
   return fetchFPL("leagues-h2h-matches/league/" + leagueId + "/?event=" + gw);
 }
 
+/** One page of the full-season match list (pairings for every gameweek). */
+function fetchH2HMatchesPage(leagueId, page) {
+  return fetchFPL("leagues-h2h-matches/league/" + leagueId + "/?page=" + page);
+}
+
 /** Live player scores for a gameweek — the source of truth for provisional points. */
 function fetchEventLive(gw) {
   return fetchFPL("event/" + gw + "/live/", { silent: true });

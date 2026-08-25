@@ -5,6 +5,7 @@ import {
   MonthlyAward,
   LeagueDashboardData,
   LiveGwData,
+  H2HScheduleRow,
 } from '../types';
 import {
   INITIAL_CLASSIC_STANDINGS,
@@ -302,6 +303,29 @@ export async function fetchSeasonInfo(): Promise<SeasonInfo | null> {
     };
   } catch (err) {
     console.warn('Season info unavailable:', err);
+    return null;
+  }
+}
+
+
+/**
+ * The league's real head-to-head schedule for the whole season (drawn once by
+ * FPL), with points for gameweeks already played. Pairings never change, so
+ * the result is memoised for the session.
+ */
+let scheduleMemo: H2HScheduleRow[] | null = null;
+
+export async function fetchH2HSchedule(): Promise<H2HScheduleRow[] | null> {
+  if (scheduleMemo) return scheduleMemo;
+  try {
+    const json = await fetchJson(endpoint('h2h_schedule'), READ_TIMEOUT_MS);
+    if (json.status === 'success' && Array.isArray(json.data?.matches)) {
+      scheduleMemo = json.data.matches as H2HScheduleRow[];
+      return scheduleMemo;
+    }
+    return null;
+  } catch (err) {
+    console.warn('H2H schedule unavailable:', err);
     return null;
   }
 }

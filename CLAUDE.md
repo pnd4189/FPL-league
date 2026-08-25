@@ -56,6 +56,7 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 - `?action=weekly` — Weekly winner records (38 rows)
 - `?action=monthly` — Monthly awards (10 rows)
 - `?action=live` — Provisional in-play scores + H2H (90s cache, polled by the website)
+- `?action=h2h_schedule` — Real league fixtures for all 38 GWs from the FPL api (pairings + played points), 5-min cache
 - `?action=season` — Current/display GW, live flag, month→GW buckets
 - `?action=status` — Last refresh state and trigger status
 - `?action=refresh&key=htcv-fpl-2027` — Force full refresh (3-min cooldown, script-locked)
@@ -77,6 +78,7 @@ Read responses are cached 5 min under a generation token; `refreshFPLAll()` bump
 - Captain pick + captain points columns in Nhất Tuần (live GW only, from `?action=live`)
 - Squad popup on current-GW points in every tab that shows them (Nhất Tuần, Classic League ⚡GW column, H2H live match cards, Nhất Tháng per-GW cells) — fplgames-style, `web/src/components/SquadTooltip.tsx` + `SquadPopupWrap`. Desktop: cursor tooltip on hover. Touch: tap the points for a bottom sheet (backdrop/✕/Esc/re-tap close)
 - Classic tab renamed "Classic League", with a live current-GW column right before TOTAL
+- H2H fixtures everywhere come from the real league draw (`?action=h2h_schedule`) — never a locally generated schedule; unplayed GWs show "-" points
 - Manager modal links to the official squad: `fantasy.premierleague.com/en/entry/{id}/event/{gw}`
 
 ### 🔲 Remaining

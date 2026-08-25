@@ -74,6 +74,18 @@ export interface H2HMatch {
   awayId: number;
   result: 'Home Win' | 'Away Win' | 'Draw' | 'Upcoming';
   diff: number;
+  /** False for gameweeks not played yet — points render as '-'. */
+  played?: boolean;
+}
+
+/** One real league fixture from the official FPL head-to-head schedule. */
+export interface H2HScheduleRow {
+  gw: number;
+  homeId: number;
+  awayId: number;
+  homePts: number;
+  awayPts: number;
+  played: boolean;
 }
 
 export interface WeeklyWinner {

@@ -15,7 +15,7 @@
 // Responses safe to cache. Live scores are excluded because Live.gs already
 // caches them on its own, shorter clock.
 const CACHEABLE_ACTIONS = [
-  "dashboard", "classic", "h2h", "h2h_matches", "weekly",
+  "dashboard", "classic", "h2h", "h2h_matches", "h2h_schedule", "weekly",
   "monthly", "cup", "finance", "player", "config", "players"
 ];
 
@@ -71,6 +71,9 @@ function doGet(e) {
         break;
       case "h2h_matches":
         result = getH2HMatchesData(params.gw);
+        break;
+      case "h2h_schedule":
+        result = getH2HSchedule();
         break;
       case "weekly":
         result = getSheetDataAsObjects("🏆 Weekly Winners");

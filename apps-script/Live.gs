@@ -228,6 +228,59 @@ function computeLiveH2H_(gw, liveScores) {
 }
 
 /**
+ * The real head-to-head schedule for the whole season — the league's actual
+ * draw, straight from the FPL api — plus points for gameweeks already played.
+ *
+ * The website previously invented a round-robin schedule locally, which did
+ * not match the official league page and leaked the previous gameweek's
+ * points into future ones. Pairings are drawn once and never change, so the
+ * response is cheap to cache.
+ */
+function getH2HSchedule() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("h2h_schedule");
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) { /* rebuild below */ }
+  }
+
+  // A gameweek counts as played once finished, or is current (in progress).
+  const state = getSeasonState();
+  const played = {};
+  if (state) {
+    for (const event of state.events) played[event.id] = event.finished || event.isCurrent;
+  }
+
+  const matches = [];
+  let page = 1;
+  let hasNext = true;
+  while (hasNext && page <= 12) {
+    const data = fetchH2HMatchesPage(CONFIG.H2H_LEAGUE_ID, page);
+    if (!data || !data.results || !data.results.length) break;
+    for (const m of data.results) {
+      matches.push({
+        gw: m.event,
+        homeId: m.entry_1_entry,
+        awayId: m.entry_2_entry,
+        homePts: m.entry_1_points || 0,
+        awayPts: m.entry_2_points || 0,
+        played: !!played[m.event]
+      });
+    }
+    hasNext = !!data.has_next;
+    page++;
+  }
+
+  const payload = {
+    status: "success",
+    data: { matches: matches, count: matches.length, updatedAt: new Date().toISOString() }
+  };
+  cache.put("h2h_schedule", JSON.stringify(payload), 300);
+  return payload;
+}
+
+/**
  * Live payload served to the website. Cached briefly so that every visitor
  * shares one set of upstream calls while still seeing scores move.
  *

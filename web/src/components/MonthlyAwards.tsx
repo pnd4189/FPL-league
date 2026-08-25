@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Trophy, Swords, Award, Users, Info } from 'lucide-react';
 import { MonthlyAward, ClassicStanding, H2HStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
-import { MONTH_RANGES, INITIAL_PLAYERS, getH2HMatchupsForGW } from '../data/initialData';
+import { MONTH_RANGES, INITIAL_PLAYERS } from '../data/initialData';
+import { fetchH2HSchedule } from '../services/fplApi';
+import { H2HScheduleRow } from '../types';
 import { MonthRange } from '../services/liveStandings';
 import { SquadPopupWrap } from './SquadTooltip';
 
@@ -32,6 +34,16 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
   const [selectedMonthName, setSelectedMonthName] = useState<string>(currentMonthName || months[0].name);
   const [monthTouched, setMonthTouched] = useState(false);
   const [activeMiniTab, setActiveMiniTab] = useState<'classic' | 'h2h'>('classic');
+  // The league's real draw decides who meets whom in each gameweek; a locally
+  // generated round-robin used to pick wrong opponents here.
+  const [schedule, setSchedule] = useState<H2HScheduleRow[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchH2HSchedule().then(rows => {
+      if (!cancelled) setSchedule(rows);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!monthTouched && currentMonthName) setSelectedMonthName(currentMonthName);
@@ -111,10 +123,9 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
     }[] = [];
 
     selectedMonthObj.gws.forEach(gw => {
-      const pairings = getH2HMatchupsForGW(gw, INITIAL_PLAYERS);
-      const match = pairings.find(m => m.home.id === p.id || m.away.id === p.id);
-      const isHome = match ? match.home.id === p.id : true;
-      const opp = match ? (isHome ? match.away : match.home) : null;
+      const fixture = (schedule || []).find(m => m.gw === gw && (m.homeId === p.id || m.awayId === p.id));
+      const isHome = fixture ? fixture.homeId === p.id : true;
+      const opp = fixture ? { id: isHome ? fixture.awayId : fixture.homeId } : null;
       const oppStanding = opp ? classicStandings.find(c => c.id === opp.id) : null;
 
       const myScore = classicRecord ? classicRecord.scores[gw - 1] : null;
@@ -124,18 +135,20 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
         pCount++;
         gf += myScore;
         ga += oppScore;
+        const oppManager = INITIAL_PLAYERS.find(ip => ip.id === opp?.id)?.manager || '';
         if (myScore > oppScore) {
           won++;
-          gwResults.push({ gw, result: 'W', myScore, oppScore, oppManager: opp?.manager || '', isHome });
+          gwResults.push({ gw, result: 'W', myScore, oppScore, oppManager, isHome });
         } else if (myScore === oppScore) {
           drawn++;
-          gwResults.push({ gw, result: 'D', myScore, oppScore, oppManager: opp?.manager || '', isHome });
+          gwResults.push({ gw, result: 'D', myScore, oppScore, oppManager, isHome });
         } else {
           lost++;
-          gwResults.push({ gw, result: 'L', myScore, oppScore, oppManager: opp?.manager || '', isHome });
+          gwResults.push({ gw, result: 'L', myScore, oppScore, oppManager, isHome });
         }
       } else {
-        gwResults.push({ gw, result: '-', myScore: null, oppScore: null, oppManager: opp?.manager || '', isHome });
+        gwResults.push({ gw, result: '-', myScore: null, oppScore: null,
+          oppManager: INITIAL_PLAYERS.find(ip => ip.id === opp?.id)?.manager || '', isHome });
       }
     });
 
