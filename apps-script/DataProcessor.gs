@@ -239,13 +239,50 @@ function assignRanks_(rows, totalIndex) {
 }
 
 // ============================================================
-// 4. H2H BXH — Build league table from API standings
+// 4. H2H BXH — Build league table from settled match rows
 // ============================================================
 function updateH2HStandings() {
   const sheet = getSheet("⚔️ H2H BXH");
   if (!sheet) return;
 
   logStatus("Starting updateH2HStandings");
+
+  // Only settled gameweeks may feed this table — the same predicate
+  // refreshH2HMatches uses to decide which stored rows are final. The display
+  // gameweek's rows always carry provisional points, so they must never be
+  // summed here.
+  const state = getSeasonState();
+  if (!state) {
+    logStatus("updateH2HStandings skipped: no season state, previous table kept");
+    return;
+  }
+  const settledGwIds = {};
+  for (const event of state.events) {
+    if (event.finished && event.dataChecked) settledGwIds[event.id] = true;
+  }
+
+  // The standings payload never includes points_against, and its own
+  // points_for/total only cover finished gameweeks. Derive P, W, D, L, GF, GA
+  // and H2H points for every manager from the SAME settled match rows (as the
+  // monthly H2H award does), so each written row is internally consistent:
+  // P equals the counted matches, GD equals GF - GA, and across the table
+  // ΣGF equals ΣGA.
+  const matchesSheet = getSheet("LichThiDauLeague");
+  const matchesData = matchesSheet ? matchesSheet.getDataRange().getValues() : [];
+  const tableByEntry = {};
+  for (let i = 1; i < matchesData.length; i++) {
+    if (!settledGwIds[matchesData[i][0]]) continue;
+
+    const homeId = String(matchesData[i][11]);
+    const awayId = String(matchesData[i][12]);
+    if (!homeId || homeId === "0" || !awayId || awayId === "0") continue;
+
+    const homePts = Number(matchesData[i][3]) || 0;
+    const awayPts = Number(matchesData[i][6]) || 0;
+    accumulateH2HMatch_(tableByEntry, homeId, homePts, awayPts, Number(matchesData[i][4]) || 0);
+    accumulateH2HMatch_(tableByEntry, awayId, awayPts, homePts, Number(matchesData[i][7]) || 0);
+  }
+
   const data = fetchH2HStandings(CONFIG.H2H_LEAGUE_ID);
 
   if (!data || !data.standings || !data.standings.results) {
@@ -254,46 +291,44 @@ function updateH2HStandings() {
   }
 
   const results = data.standings.results;
-
-  // The standings payload never includes points_against, so derive each
-  // manager's GA from the stored match rows (every opponent score against
-  // them), which also keeps GD honest.
-  const matchesSheet = getSheet("LichThiDauLeague");
-  const matchesData = matchesSheet ? matchesSheet.getDataRange().getValues() : [];
-  const againstByEntry = {};
-  for (let i = 1; i < matchesData.length; i++) {
-    const homeId = String(matchesData[i][11]);
-    const awayId = String(matchesData[i][12]);
-    const homePts = Number(matchesData[i][3]) || 0;
-    const awayPts = Number(matchesData[i][6]) || 0;
-    if (homeId) againstByEntry[homeId] = (againstByEntry[homeId] || 0) + awayPts;
-    if (awayId) againstByEntry[awayId] = (againstByEntry[awayId] || 0) + homePts;
-  }
-
   const writeData = [];
 
   for (const r of results) {
-    // points_against is absent from the payload until matches are played;
-    // writing it raw left the GA column blank and GD as #NUM!.
-    const gf = r.points_for || 0;
-    const ga = againstByEntry[String(r.entry)] !== undefined
-      ? againstByEntry[String(r.entry)]
-      : (r.points_against || 0);
-    writeData.push([
-      0, // rank assigned below
-      // The API returns the real FPL account name ("Dung Pham"); the website
-      // matches rows by league nickname, so translate it here.
-      getManagerName(r.entry, r.player_name),
-      r.matches_played,
-      r.matches_won,
-      r.matches_drawn,
-      r.matches_lost,
-      gf,
-      ga,
-      gf - ga,
-      r.total,
-      gf  // Classic Total (approx, can be overridden)
-    ]);
+    const derived = tableByEntry[String(r.entry)];
+    if (derived) {
+      writeData.push([
+        0, // rank assigned below
+        // The API returns the real FPL account name ("Dung Pham"); the website
+        // matches rows by league nickname, so translate it here.
+        getManagerName(r.entry, r.player_name),
+        derived.p,
+        derived.w,
+        derived.d,
+        derived.l,
+        derived.gf,
+        derived.ga,
+        derived.gf - derived.ga,
+        derived.pts,
+        derived.gf  // Classic Total (approx, can be overridden)
+      ]);
+    } else {
+      // Manager with no counted rows — nothing played yet, so the API's own
+      // (zeroed) columns are already consistent.
+      const gf = r.points_for || 0;
+      writeData.push([
+        0,
+        getManagerName(r.entry, r.player_name),
+        r.matches_played,
+        r.matches_won,
+        r.matches_drawn,
+        r.matches_lost,
+        gf,
+        r.points_against || 0,
+        gf - (r.points_against || 0),
+        r.total,
+        gf
+      ]);
+    }
   }
 
   // League ranking rule: points, then goal difference, then goals for —
@@ -320,6 +355,21 @@ function updateH2HStandings() {
     sheet.getRange(2, 1, writeData.length, 11).setValues(writeData);
   }
   logStatus("updateH2HStandings done: " + writeData.length + " rows");
+}
+
+/** Fold one settled match into a manager's running H2H table totals. */
+function accumulateH2HMatch_(table, entryId, pointsFor, pointsAgainst, h2hPoints) {
+  if (!table[entryId]) {
+    table[entryId] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 };
+  }
+  const row = table[entryId];
+  row.p++;
+  row.gf += pointsFor;
+  row.ga += pointsAgainst;
+  row.pts += h2hPoints;
+  if (pointsFor > pointsAgainst) row.w++;
+  else if (pointsFor === pointsAgainst) row.d++;
+  else row.l++;
 }
 
 // ============================================================
