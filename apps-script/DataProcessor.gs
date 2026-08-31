@@ -283,6 +283,19 @@ function updateH2HStandings() {
     accumulateH2HMatch_(tableByEntry, awayId, awayPts, homePts, Number(matchesData[i][7]) || 0);
   }
 
+  // Column K "Classic Total" mirrors the Classic tab's TOTAL: the sum of the
+  // player's net points over every gameweek row in FantasyData (including the
+  // current in-play GW), exactly like updateClassicStandings. The H2H match
+  // points above only cover settled gameweeks, so they are just the fallback
+  // for a manager with no FantasyData rows yet.
+  const fdSheet = getSheet("FantasyData");
+  const fdData = fdSheet ? fdSheet.getDataRange().getValues() : [];
+  const classicTotals = {};
+  for (let i = 1; i < fdData.length; i++) {
+    const id = String(fdData[i][0]);
+    classicTotals[id] = (classicTotals[id] || 0) + (Number(fdData[i][11]) || 0);
+  }
+
   const data = fetchH2HStandings(CONFIG.H2H_LEAGUE_ID);
 
   if (!data || !data.standings || !data.standings.results) {
@@ -295,6 +308,7 @@ function updateH2HStandings() {
 
   for (const r of results) {
     const derived = tableByEntry[String(r.entry)];
+    const classicTotal = classicTotals[String(r.entry)];
     if (derived) {
       writeData.push([
         0, // rank assigned below
@@ -309,7 +323,7 @@ function updateH2HStandings() {
         derived.ga,
         derived.gf - derived.ga,
         derived.pts,
-        derived.gf  // Classic Total (approx, can be overridden)
+        classicTotal !== undefined ? classicTotal : derived.gf
       ]);
     } else {
       // Manager with no counted rows — nothing played yet, so the API's own
@@ -326,7 +340,7 @@ function updateH2HStandings() {
         r.points_against || 0,
         gf - (r.points_against || 0),
         r.total,
-        gf
+        classicTotal !== undefined ? classicTotal : gf
       ]);
     }
   }
