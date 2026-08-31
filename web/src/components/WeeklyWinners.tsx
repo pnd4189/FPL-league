@@ -64,6 +64,24 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
     return live && live.gw === selectedGW && row?.captain ? row.captain : null;
   };
 
+  // The 38-round history below comes from the settled weekly sheet, which can
+  // lag FPL's live corrections while a gameweek is running. For the gameweek
+  // in progress only, take the leader from the live-merged classic standings —
+  // the same source the ranking table above uses — so both halves of this tab
+  // agree. Joint leaders join as "A & B", matching how the sheet stores ties.
+  const liveGwWinner = (gw: number): { winner: string; points: number } | null => {
+    if (!live || !live.isLive || live.gw !== gw) return null;
+    const played = classicStandings
+      .map(p => ({ manager: p.manager, points: p.scores[gw - 1] }))
+      .filter((p): p is { manager: string; points: number } => p.points !== null);
+    if (!played.length) return null;
+    const top = Math.max(...played.map(p => p.points));
+    return {
+      winner: played.filter(p => p.points === top).map(p => p.manager).join(' & '),
+      points: top,
+    };
+  };
+
   const top1Score = roundRankings[0]?.points || 0;
   const isPlayed = roundRankings[0]?.hasPlayed;
   
@@ -437,7 +455,10 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {winners.map((w) => {
-            const hasWinner = w.points > 0;
+            const liveInfo = liveGwWinner(w.gw);
+            const hasWinner = w.points > 0 || !!liveInfo;
+            const winnerName = liveInfo ? liveInfo.winner : w.winner;
+            const winnerPoints = liveInfo ? liveInfo.points : w.points;
             return (
               <div
                 key={w.gw}
@@ -463,10 +484,19 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                 {/* Winner Info (No Runner Up) */}
                 {hasWinner ? (
                   <div className="flex items-center gap-3">
-                    <PlayerAvatar name={w.winner} size="md" rank={1} />
+                    <PlayerAvatar name={winnerName} size="md" rank={1} />
                     <div className="min-w-0">
-                      <p className="text-sm font-black truncate font-display" style={{ color: 'var(--text-main)' }}>{w.winner}</p>
-                      <p className="text-xs font-mono font-bold" style={{ color: 'var(--accent-primary)' }}>{w.points} pts cao nhất</p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-sm font-black truncate font-display" style={{ color: 'var(--text-main)' }}>{winnerName}</p>
+                        {liveInfo && (
+                          <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-mono font-black animate-pulse"
+                            style={{ backgroundColor: '#ff2d55', color: '#ffffff' }}
+                          >
+                            ● LIVE
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-mono font-bold" style={{ color: 'var(--accent-primary)' }}>{winnerPoints} pts cao nhất</p>
                     </div>
                   </div>
                 ) : (
