@@ -103,6 +103,10 @@ export function mergeLiveH2H(standings: H2HStanding[], live: LiveGwData | null):
       pointsAgainst,
       goalDifference: pointsFor - pointsAgainst,
       points: row.points + d.pts,
+      // classicTotal mirrors the Classic tab's TOTAL (every FantasyData row
+      // including the live GW), so it must advance with the live points too —
+      // otherwise the Pts→ClassicTotal tiebreak below lags the Classic table.
+      classicTotal: row.classicTotal + d.for,
     };
   });
 
@@ -110,18 +114,22 @@ export function mergeLiveH2H(standings: H2HStanding[], live: LiveGwData | null):
 }
 
 /**
- * League ranking rule: points, then goal difference, then goals for. Equal on
- * all three shares a rank. Applied to settled tables too, because the FPL api
- * orders rows by its own tiebreak instead of this league's.
+ * Overall H2H league ranking rule — the official FPL site rule: H2H points,
+ * then overall classic total. Equal on both shares a rank. GD/GF are NOT
+ * tiebreakers here. Applied to settled tables too, because the FPL api orders
+ * rows by its own tiebreak instead of this league's.
+ *
+ * The MONTHLY H2H table (Nhất tháng) uses a different rule — Pts → GD → GF →
+ * month classic total (see MonthlyAwards.tsx). Do not reuse this function there.
  */
 export function rankH2HStandings(rows: H2HStanding[]): H2HStanding[] {
   const sorted = rows.slice().sort(
-    (a, b) => b.points - a.points || b.goalDifference - a.goalDifference || b.pointsFor - a.pointsFor,
+    (a, b) => b.points - a.points || b.classicTotal - a.classicTotal,
   );
   let rank = 0;
   let previousKey: string | null = null;
   return sorted.map((row, i) => {
-    const key = `${row.points}|${row.goalDifference}|${row.pointsFor}`;
+    const key = `${row.points}|${row.classicTotal}`;
     if (key !== previousKey) rank = i + 1;
     previousKey = key;
     return rank === row.rank ? row : { ...row, rank };

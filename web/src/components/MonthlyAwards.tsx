@@ -177,6 +177,10 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
       gwResults,
     };
   }).sort((a, b) => {
+    // MONTHLY H2H rule — intentionally different from the overall H2H League
+    // tab (which ranks by the official FPL rule: H2H Pts → Classic Total).
+    // Here GD decides ties; classic total is only the LAST tie level. Keep as
+    // is — do not use classic total as the primary tiebreak.
     // 1. H2H Points
     if (b.h2hPts !== a.h2hPts) return b.h2hPts - a.h2hPts;
     // 2. Goal Difference (GD) - Higher GD wins!

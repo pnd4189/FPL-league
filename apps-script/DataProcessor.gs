@@ -345,17 +345,17 @@ function updateH2HStandings() {
     }
   }
 
-  // League ranking rule: points, then goal difference, then goals for —
-  // the FPL api orders by its own tiebreak, which is not what this league
-  // plays by.
+  // Official FPL ranking rule for the overall H2H league table: H2H points,
+  // then Classic Total (column K). GD is NOT used here — GD remains the
+  // tiebreak for the monthly H2H award only (pickMonthlyH2HBest_).
   writeData.sort(function (a, b) {
-    return (b[9] - a[9]) || (b[8] - a[8]) || (b[6] - a[6]);
+    return (b[9] - a[9]) || (b[10] - a[10]);
   });
   let rank = 0;
   let previousKey = null;
   for (let i = 0; i < writeData.length; i++) {
     const row = writeData[i];
-    const key = row[9] + "|" + row[8] + "|" + row[6];
+    const key = row[9] + "|" + row[10];
     if (key !== previousKey) rank = i + 1;
     row[0] = rank;
     previousKey = key;
@@ -582,9 +582,11 @@ function pickMonthlyBest_(players, gws, lookup) {
 }
 
 /**
- * Monthly H2H champion ranked by 1. H2H points, 2. goal difference
+ * Monthly H2H tiebreak is GD-based: 1. H2H points, 2. goal difference
  * (match points for − against), 3. match points for, 4. month classic
- * total — the same rule the website's provisional H2H table shows.
+ * total. This is intentionally DIFFERENT from the overall H2H league
+ * table, which ranks by the official FPL rule (H2H points → Classic
+ * Total). Do not align them.
  * Joint winners only when all four criteria are exactly equal.
  * @param {Object} h2hPtsLookup  playerId → gw → h2h points (3/1/0)
  * @param {Object} gfLookup      playerId → gw → match points scored
