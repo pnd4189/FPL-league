@@ -103,10 +103,10 @@ export function mergeLiveH2H(standings: H2HStanding[], live: LiveGwData | null):
       pointsAgainst,
       goalDifference: pointsFor - pointsAgainst,
       points: row.points + d.pts,
-      // classicTotal mirrors the Classic tab's TOTAL (every FantasyData row
-      // including the live GW), so it must advance with the live points too —
-      // otherwise the Pts→ClassicTotal tiebreak below lags the Classic table.
-      classicTotal: row.classicTotal + d.for,
+      // classicTotal is NOT touched here: the h2h sheet value already counts
+      // the live gameweek (FantasyData records it), so adding the live points
+      // again double-counts. App.tsx mirrors the Classic tab's fresh TOTAL
+      // onto this column instead.
     };
   });
 

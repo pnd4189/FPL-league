@@ -207,10 +207,20 @@ export const App: React.FC = () => {
     () => mergeLiveClassic(classicStandings, live),
     [classicStandings, live],
   );
-  const liveH2HStandings = useMemo(
-    () => mergeLiveH2H(h2hStandings, live),
-    [h2hStandings, live],
-  );
+  const liveH2HStandings = useMemo(() => {
+    const merged = mergeLiveH2H(h2hStandings, live);
+    // The H2H Classic column mirrors the Classic tab's live TOTAL. The h2h
+    // sheet snapshot already counts the live gameweek, so re-derive it from
+    // the same fresh numbers the Classic table shows instead of trusting a
+    // possibly hours-old copy.
+    const totals = new Map(liveClassicStandings.map(c => [c.id, c.total]));
+    return merged.map(row => {
+      const total = totals.get(row.id);
+      return total !== undefined && total !== row.classicTotal
+        ? { ...row, classicTotal: total }
+        : row;
+    });
+  }, [h2hStandings, live, liveClassicStandings]);
 
   // The gameweek every tab lands on by default — no manual switching needed.
   const currentGW = live?.gw
@@ -302,7 +312,6 @@ export const App: React.FC = () => {
             currentGW={currentGW}
             isLive={isLiveNow}
             live={live}
-            months={months}
             onSelectPlayer={(id) => setSelectedPlayerId(id)}
           />
         )}

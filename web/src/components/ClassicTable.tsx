@@ -2,16 +2,13 @@ import React, { useState } from 'react';
 import { Trophy, Search, Award, Crown } from 'lucide-react';
 import { ClassicStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
-import { MonthRange } from '../services/liveStandings';
 import { SquadPopupWrap } from './SquadTooltip';
-import { MONTH_RANGES } from '../data/initialData';
 
 interface ClassicTableProps {
   standings: ClassicStanding[];
   currentGW?: number;
   isLive?: boolean;
   live?: LiveGwData | null;
-  months?: MonthRange[];
   onSelectPlayer: (id: number) => void;
 }
 
@@ -20,15 +17,9 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
   currentGW = 1,
   isLive = false,
   live = null,
-  months = MONTH_RANGES,
   onSelectPlayer,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  // Mirror the official league page: the full-season standings come first;
-  // the month pills stay as an optional filter.
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
-
-  const chooseMonth = (name: string) => setSelectedMonth(name);
 
   const filteredStandings = standings.filter(p => {
     const matchName = p.manager.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,14 +27,8 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
     return matchName;
   });
 
-  // Determine displayed GWs
-  let displayedGWs = Array.from({ length: 38 }, (_, i) => i + 1);
-  if (selectedMonth !== 'all') {
-    const month = months.find(m => m.name === selectedMonth);
-    if (month) {
-      displayedGWs = month.gws;
-    }
-  }
+  // The full-season matrix, mirroring the official league standings page.
+  const displayedGWs = Array.from({ length: 38 }, (_, i) => i + 1);
 
   return (
     <div className="space-y-6">
@@ -85,51 +70,6 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
             }}
           />
         </div>
-      </div>
-
-      {/* Month Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
-        <button
-          onClick={() => chooseMonth('all')}
-          className={`interactive px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
-            selectedMonth === 'all'
-              ? 'shadow-md scale-105'
-              : 'opacity-70 hover:opacity-100'
-          }`}
-          style={selectedMonth === 'all' ? {
-            backgroundColor: 'var(--accent-primary)',
-            color: '#000000',
-          } : {
-            backgroundColor: 'var(--bg-card)',
-            color: 'var(--text-muted)',
-            border: '1px solid var(--border-subtle)'
-          }}
-        >
-          Toàn Bộ Mùa (GW1-38)
-        </button>
-        {months.map(m => {
-          const isSel = selectedMonth === m.name;
-          return (
-            <button
-              key={m.name}
-              onClick={() => chooseMonth(m.name)}
-              className={`interactive flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all ${
-                isSel ? 'shadow-md scale-105' : 'opacity-70 hover:opacity-100'
-              }`}
-              style={isSel ? {
-                backgroundColor: 'var(--bg-card-hover)',
-                color: 'var(--text-main)',
-                border: '1px solid var(--border-highlight)'
-              } : {
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-muted)',
-                border: '1px solid var(--border-subtle)'
-              }}
-            >
-              {m.name} ({m.range})
-            </button>
-          );
-        })}
       </div>
 
       {/* Main Table Matrix with horizontal scroll & frozen columns */}
