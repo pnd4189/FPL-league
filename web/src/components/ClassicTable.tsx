@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Trophy, Search, Award, Crown } from 'lucide-react';
 import { ClassicStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -9,7 +9,6 @@ import { MONTH_RANGES } from '../data/initialData';
 interface ClassicTableProps {
   standings: ClassicStanding[];
   currentGW?: number;
-  currentMonthName?: string;
   isLive?: boolean;
   live?: LiveGwData | null;
   months?: MonthRange[];
@@ -19,26 +18,17 @@ interface ClassicTableProps {
 export const ClassicTable: React.FC<ClassicTableProps> = ({
   standings,
   currentGW = 1,
-  currentMonthName,
   isLive = false,
   live = null,
   months = MONTH_RANGES,
   onSelectPlayer,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  // Land on the month being played instead of making people hunt for it.
-  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthName || 'all');
-  const [monthTouched, setMonthTouched] = useState(false);
+  // Mirror the official league page: the full-season standings come first;
+  // the month pills stay as an optional filter.
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
-  // Follow the season forward until the visitor picks a month themselves.
-  useEffect(() => {
-    if (!monthTouched && currentMonthName) setSelectedMonth(currentMonthName);
-  }, [currentMonthName, monthTouched]);
-
-  const chooseMonth = (name: string) => {
-    setMonthTouched(true);
-    setSelectedMonth(name);
-  };
+  const chooseMonth = (name: string) => setSelectedMonth(name);
 
   const filteredStandings = standings.filter(p => {
     const matchName = p.manager.toLowerCase().includes(searchTerm.toLowerCase()) ||

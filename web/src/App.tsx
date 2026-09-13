@@ -83,6 +83,8 @@ export const App: React.FC = () => {
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
   // Load settled data from the Google Sheet Web App API
+  const offlineRef = useRef(false);
+  const retryTimer = useRef<number | null>(null);
   const loadData = useCallback(async () => {
     const [dash, classic, h2h, weekly, monthly] = await Promise.all([
       fetchDashboardData(),
@@ -96,8 +98,18 @@ export const App: React.FC = () => {
     setH2HStandings(h2h.data);
     setWeeklyWinners(weekly.data);
     setMonthlyAwards(monthly.data);
-    // Surface the fallback instead of passing placeholder tables off as real.
-    setIsOffline(!dash.ok && !classic.ok && !h2h.ok);
+    // Any placeholder table is a lie — flag it, and let the poll self-heal.
+    const offline = [dash, classic, h2h, weekly, monthly].some(r => !r.ok);
+    offlineRef.current = offline;
+    setIsOffline(offline);
+    // While offline, keep retrying in the background so the placeholder
+    // tables heal themselves instead of waiting for a manual reload.
+    if (offline && retryTimer.current === null) {
+      retryTimer.current = window.setTimeout(() => {
+        retryTimer.current = null;
+        if (offlineRef.current) loadData();
+      }, 15000);
+    }
   }, []);
 
   const loadLive = useCallback(async () => {
@@ -288,7 +300,6 @@ export const App: React.FC = () => {
           <ClassicTable
             standings={liveClassicStandings}
             currentGW={currentGW}
-            currentMonthName={currentMonthName}
             isLive={isLiveNow}
             live={live}
             months={months}

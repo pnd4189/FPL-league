@@ -35,17 +35,30 @@ export interface ApiResult<T> {
   ok: boolean;
 }
 
-/** fetch() never times out on its own; a hung Apps Script would hang the UI. */
-async function fetchJson(url: string, timeoutMs: number): Promise<any> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { mode: 'cors', signal: controller.signal });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
+/**
+ * fetch() never times out on its own; a hung Apps Script would hang the UI.
+ *
+ * A cache-cold Apps Script read can take 15-20s — right at the read timeout —
+ * while the aborted request still warms the server cache. One retry turns
+ * that into a ~2s second attempt instead of the placeholder fallback that
+ * used to wipe every settled gameweek off the tables.
+ */
+async function fetchJson(url: string, timeoutMs: number, retries = 1): Promise<any> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { mode: 'cors', signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  throw lastError;
 }
 
 function endpoint(action: string): string {
@@ -255,6 +268,7 @@ export async function triggerLiveSync(): Promise<{ success: boolean; message: st
     const json = await fetchJson(
       `${WEB_APP_URL}?action=refresh&key=${REFRESH_API_KEY}&_t=${Date.now()}`,
       SYNC_TIMEOUT_MS,
+      0,
     );
     if (json.status === 'success' || json.status === 'partial') {
       return { success: true, message: json.message || 'Đồng bộ FPL thành công!', elapsed: json.elapsed };
