@@ -115,8 +115,14 @@ function refreshFPLAll() {
   setStateProperty_("last_refresh_gw", state ? String(state.displayGw) : "");
   if (state) setStateProperty_("last_settled_gw", String(state.finishedGws));
 
-  // Any cached web response is now stale; bump the generation so readers miss.
+  // Any cached web response is now stale; bump the generation so readers miss,
+  // then pre-fill the new generation so nobody pays the cold read.
   bumpCacheGeneration_();
+  try {
+    warmWebCache_();
+  } catch (err) {
+    logStatus("Cache warmup failed: " + err.message);
+  }
 
   logStatus(">>> MASTER REFRESH COMPLETED — ok: " + ok.length + ", failed: " + failed.length);
   return { ok: ok, failed: failed };

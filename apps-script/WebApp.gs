@@ -42,6 +42,43 @@ function buildCacheKey_(action, params) {
   return ["webapp", getCacheGeneration_(), action, params.gw || "", params.id || ""].join("|");
 }
 
+/**
+ * Pre-populate the hot read caches right after a refresh.
+ *
+ * Every refresh bumps the cache generation, so the first visitor afterwards
+ * used to pay a 15-20s cold sheet read — right at the client's timeout, which
+ * is what wiped settled gameweeks off the tables. Building the five hot
+ * payloads in-process (~seconds, no network) removes that tail entirely.
+ */
+function warmWebCache_() {
+  // Make sure the reads below observe everything this refresh just wrote.
+  SpreadsheetApp.flush();
+
+  const gen = getCacheGeneration_();
+  const entries = [
+    ["dashboard", getDashboardData],
+    ["classic", function () { return getSheetDataAsObjects("🏅 Classic BXH"); }],
+    ["h2h", function () { return getSheetDataAsObjects("⚔️ H2H BXH"); }],
+    ["weekly", function () { return getSheetDataAsObjects("🏆 Weekly Winners"); }],
+    ["monthly", function () { return getSheetDataAsObjects("📅 Monthly Awards"); }]
+  ];
+
+  const cache = CacheService.getScriptCache();
+  let warmed = 0;
+  for (const entry of entries) {
+    try {
+      const body = JSON.stringify(entry[1]());
+      if (JSON.parse(body).status !== "success") continue;
+      cache.put(["webapp", gen, entry[0], "", ""].join("|"), body, CONFIG.WEB_CACHE_TTL);
+      warmed++;
+    } catch (e) {
+      // A cold visitor read is the fallback, never a failed refresh.
+      logStatus("Cache warmup skipped for " + entry[0] + ": " + e.message);
+    }
+  }
+  logStatus("Cache warmup: " + warmed + "/" + entries.length + " actions pre-cached.");
+}
+
 function doGet(e) {
   const params = (e && e.parameter) || {};
   const action = params.action || "dashboard";

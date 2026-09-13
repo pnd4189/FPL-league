@@ -38,12 +38,20 @@ export interface ApiResult<T> {
 /**
  * fetch() never times out on its own; a hung Apps Script would hang the UI.
  *
- * A cache-cold Apps Script read can take 15-20s — right at the read timeout —
- * while the aborted request still warms the server cache. One retry turns
- * that into a ~2s second attempt instead of the placeholder fallback that
- * used to wipe every settled gameweek off the tables.
+ * Two failure classes both deserve one retry:
+ *   - transport: a cache-cold Apps Script read can take 15-20s, right at the
+ *     read timeout, while the aborted request still warms the server cache —
+ *     attempt two returns in ~2s
+ *   - payload: Apps Script answers transient Sheet contention with HTTP 200
+ *     and {"status":"error"}; `accept` catches that so it cannot slip
+ *     straight into the placeholder fallback
  */
-async function fetchJson(url: string, timeoutMs: number, retries = 1): Promise<any> {
+async function fetchJson(
+  url: string,
+  timeoutMs: number,
+  retries = 1,
+  accept?: (json: any) => boolean,
+): Promise<any> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController();
@@ -51,7 +59,9 @@ async function fetchJson(url: string, timeoutMs: number, retries = 1): Promise<a
     try {
       const res = await fetch(url, { mode: 'cors', signal: controller.signal });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      return await res.json();
+      const json = await res.json();
+      if (accept && !accept(json)) throw new Error('unacceptable payload');
+      return json;
     } catch (err) {
       lastError = err;
     } finally {
@@ -67,7 +77,7 @@ function endpoint(action: string): string {
 
 export async function fetchDashboardData(): Promise<ApiResult<LeagueDashboardData>> {
   try {
-    const json = await fetchJson(endpoint('dashboard'), READ_TIMEOUT_MS);
+    const json = await fetchJson(endpoint('dashboard'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && !!j.data);
     if (json.status === 'success' && json.data) {
       return {
         ok: true,
@@ -139,7 +149,7 @@ function visualsOf(profile: any) {
 
 export async function fetchClassicStandings(): Promise<ApiResult<ClassicStanding[]>> {
   try {
-    const json = await fetchJson(endpoint('classic'), READ_TIMEOUT_MS);
+    const json = await fetchJson(endpoint('classic'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && Array.isArray(j.data) && j.data.length > 0);
     if (json.status === 'success' && Array.isArray(json.data) && json.data.length > 0) {
       const data = json.data.map((row: any, idx: number) => {
         const scores: (number | null)[] = [];
@@ -172,7 +182,7 @@ export async function fetchClassicStandings(): Promise<ApiResult<ClassicStanding
 
 export async function fetchH2HStandings(): Promise<ApiResult<H2HStanding[]>> {
   try {
-    const json = await fetchJson(endpoint('h2h'), READ_TIMEOUT_MS);
+    const json = await fetchJson(endpoint('h2h'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && Array.isArray(j.data) && j.data.length > 0);
     if (json.status === 'success' && Array.isArray(json.data) && json.data.length > 0) {
       const data = json.data.map((row: any, idx: number) => {
         const profile = resolveInitialPlayer(row, INITIAL_H2H_STANDINGS);
@@ -202,7 +212,7 @@ export async function fetchH2HStandings(): Promise<ApiResult<H2HStanding[]>> {
 
 export async function fetchWeeklyWinners(): Promise<ApiResult<WeeklyWinner[]>> {
   try {
-    const json = await fetchJson(endpoint('weekly'), READ_TIMEOUT_MS);
+    const json = await fetchJson(endpoint('weekly'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && Array.isArray(j.data) && j.data.length > 0);
     if (json.status === 'success' && Array.isArray(json.data) && json.data.length > 0) {
       const data = json.data.map((row: any) => ({
         gw: Number(row['GW']) || 1,
@@ -225,7 +235,7 @@ export async function fetchWeeklyWinners(): Promise<ApiResult<WeeklyWinner[]>> {
 
 export async function fetchMonthlyAwards(): Promise<ApiResult<MonthlyAward[]>> {
   try {
-    const json = await fetchJson(endpoint('monthly'), READ_TIMEOUT_MS);
+    const json = await fetchJson(endpoint('monthly'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && Array.isArray(j.data) && j.data.length > 0);
     if (json.status === 'success' && Array.isArray(json.data) && json.data.length > 0) {
       const data = json.data.map((row: any) => ({
         monthName: row['Tháng'] || '',
@@ -254,8 +264,8 @@ export async function fetchMonthlyAwards(): Promise<ApiResult<MonthlyAward[]>> {
  */
 export async function fetchLiveData(): Promise<LiveGwData | null> {
   try {
-    const json = await fetchJson(endpoint('live'), READ_TIMEOUT_MS);
-    if (json.status === 'success' && json.data) return json.data as LiveGwData;
+    const json = await fetchJson(endpoint('live'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && !!j.data);
+    if (json && json.data) return json.data as LiveGwData;
     return null;
   } catch (err) {
     console.warn('Live data unavailable:', err);
@@ -299,7 +309,7 @@ export interface SeasonInfo {
  */
 export async function fetchSeasonInfo(): Promise<SeasonInfo | null> {
   try {
-    const json = await fetchJson(endpoint('season'), READ_TIMEOUT_MS);
+    const json = await fetchJson(endpoint('season'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && !!j.data);
     if (json.status !== 'success' || !json.data) return null;
     return {
       displayGw: json.data.displayGw,
