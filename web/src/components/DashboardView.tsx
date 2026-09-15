@@ -33,7 +33,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const top5Classic = classicStandings.slice(0, 5);
   const top5H2H = h2hStandings.slice(0, 5);
 
-  const latestWinner = weeklyWinners.find(w => w.points > 0) || weeklyWinners[0];
+  // Scan from the newest gameweek: a forward find() always stopped at GW1,
+  // the first week with points, leaving the card stuck all season.
+  const latestWinner =
+    [...weeklyWinners].reverse().find(w => w.points > 0) || weeklyWinners[0];
   // Show the month actually in play, not whichever row happens to be first.
   const monthInPlay = months.find(m => m.gws.includes(currentGW));
   const currentMonth =
