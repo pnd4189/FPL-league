@@ -23,7 +23,7 @@ const ADVISOR_REPLY_TTL = 600;   // seconds — one manager's advice
  * @return {Object|null} see AdvisorLogic.gs, or null when the FPL api is down
  */
 function getAdvisorPool_(gw, played) {
-  const cached = CacheService.getScriptCache().get("advisor_pool2|" + gw);
+  const cached = CacheService.getScriptCache().get("advisor_pool3|" + gw);
   if (cached) {
     try {
       return JSON.parse(cached);
@@ -76,7 +76,8 @@ function buildAdvisorSnapshot_(gw, played) {
       parseFloat(el.selected_by_percent) || 0,
       parseFloat(el.points_per_game) || 0,
       el.starts || 0,
-      parseFloat(el.expected_goal_involvements_per_90) || 0
+      parseFloat(el.expected_goal_involvements_per_90) || 0,
+      el.now_cost - el.cost_change_start
     ];
   }
 
@@ -104,28 +105,47 @@ function buildAdvisorSnapshot_(gw, played) {
     chips: (bootstrap.chips || []).map(function (c) { return { name: c.name, start: c.start_event, stop: c.stop_event }; })
   };
   try {
-    cache.put("advisor_pool2|" + gw, JSON.stringify(pool), ADVISOR_POOL_TTL);
+    cache.put("advisor_pool3|" + gw, JSON.stringify(pool), ADVISOR_POOL_TTL);
     cache.put("advisor_season|" + gw, JSON.stringify(season), ADVISOR_POOL_TTL);
   } catch (e) { /* too large for the cache — rebuilt on the next request */ }
   return { pool: pool, season: season };
 }
 
+/** Selling price in tenths of a million: half of any price rise is kept, rounded down; a fall is lost in full. */
+function sellPrice_(buy, now) {
+  return now > buy ? buy + Math.floor((now - buy) / 2) : now;
+}
+
 /**
  * A manager's squad as it will line up for the coming gameweek.
  *
- * @return {{squad: Array<{el:number, slot:number}>, bank: number, moves: number}|null}
+ * Each pick carries its selling price (`sell`, tenths of a million), worked out
+ * from the price paid: the latest purchase in the transfer history, or the
+ * start-of-season price for the opening squad.
+ *
+ * @return {{squad: Array<{el:number, slot:number, sell:number}>, bank: number, moves: number}|null}
  *   bank in tenths of a million; moves = saved transfers already applied
  */
 function getAdvisorSquad_(entryId, state, pool) {
   const base = fetchEntryPicks(entryId, state.displayGw);
   if (!base || !base.picks) return null;
 
-  const squad = base.picks.map(function (pick) { return { el: pick.element, slot: pick.position }; });
-
   const summary = fetchFPL("entry/" + entryId + "/", { silent: true, retries: 0 });
   let bank = summary && summary.last_deadline_bank ? summary.last_deadline_bank : 0;
 
   const history = fetchFPL("entry/" + entryId + "/transfers/", { silent: true, retries: 0 }) || [];
+  const bought = {};
+  history
+    .filter(function (t) { return t.event <= state.displayGw; })
+    .sort(function (a, b) { return a.time < b.time ? -1 : 1; })
+    .forEach(function (t) { bought[t.element_in] = t.element_in_cost; });
+
+  const squad = base.picks.map(function (pick) {
+    const rec = pool.players[pick.element];
+    const buy = bought[pick.element] !== undefined ? bought[pick.element] : (rec ? rec[14] : 0);
+    return { el: pick.element, slot: pick.position, sell: rec ? sellPrice_(buy, rec[3]) : undefined };
+  });
+
   const saved = history
     .filter(function (t) { return t.event === state.nextGw; })
     .sort(function (a, b) { return a.time < b.time ? -1 : 1; });
@@ -134,10 +154,10 @@ function getAdvisorSquad_(entryId, state, pool) {
     for (const pick of squad) {
       if (pick.el !== move.element_out) continue;
       pick.el = move.element_in;
-      // Sale value is approximated by today's price, as in the suggestions.
-      const out = pool.players[move.element_out];
-      const inn = pool.players[move.element_in];
-      if (out && inn) bank += out[3] - inn[3];
+      const rec = pool.players[move.element_in];
+      pick.sell = rec ? sellPrice_(move.element_in_cost, rec[3]) : move.element_in_cost;
+      // The transfer record carries the real price of both sides.
+      bank += move.element_out_cost - move.element_in_cost;
       break;
     }
   }

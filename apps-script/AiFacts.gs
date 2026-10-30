@@ -11,14 +11,16 @@
 
 const AI_FACT_TTL = 600; // seconds — entry history and league table reuse
 
-// Topics and the words that select them. Single Vietnamese syllables are
+// Topics and the words that select them. A question about chips (Wildcard, Free
+// Hit), the head-to-head or injuries also gets the transfer plan: those answers
+// end in "so who do I sell and buy?". Single Vietnamese syllables are
 // matched with their accents only: without accents "bán" (sell) reads as
 // "bạn" (you) and "mua" (buy) as "mùa" (season).
 const AI_TOPICS = {
   chips: { any: ["wildcard", "wild card", "wc", "free hit", "freehit", "fh", "bench boost", "bb", "triple captain", "triple", "tc", "chip", "chips", "3xc", "x3", "nhân 3", "nhân ba", "bật chip"] },
   captain: { any: ["captain", "cap", "vc", "đội trưởng", "đội phó", "đeo băng"] },
   h2h: { any: ["h2h", "vs", "đối thủ", "đối đầu"], accented: ["kèo"] },
-  transfers: { any: ["transfer", "transfers", "hit", "ft", "bank", "chuyển nhượng", "thay người", "đổi người", "lượt chuyển", "ngân sách"], accented: ["bán", "mua", "giữ", "tiền"] },
+  transfers: { any: ["transfer", "transfers", "hit", "ft", "bank", "chuyển nhượng", "thay người", "đổi người", "lượt chuyển", "ngân sách", "-4", "trừ điểm"], accented: ["bán", "mua", "giữ", "tiền", "thay", "đổi"] },
   league: { any: ["bxh", "bảng xếp hạng", "thứ hạng", "xếp thứ", "top", "nhất tháng", "nhất tuần", "giải thưởng", "dẫn đầu", "vô địch", "classic"], accented: ["hạng"] },
   health: { any: ["chấn thương", "nghi ngờ", "ra sân", "treo giò", "thẻ đỏ", "injury", "injured"], accented: ["khoẻ", "khỏe"] }
 };
@@ -182,16 +184,86 @@ function h2hFacts_(d) {
   ].join("\n");
 }
 
-function transferFacts_(d, history) {
-  const lines = ["CHUYỂN NHƯỢNG gợi ý (xếp theo điểm dự kiến 5 vòng): " + (d.transfers.length ? d.transfers.map(function (t) {
-    return "bán " + aiShortText_(t.out) + " (5 vòng " + t.out.ep5 + "đ)" + (t.out.news ? " [" + t.out.news + "]" : "") + " -> mua " +
-      t.ins.slice(0, 2).map(function (p) { return aiShortText_(p) + ", 5 vòng " + p.ep5 + "đ, £" + p.cost + "m"; }).join(" hoặc ");
-  }).join(" | ") : "chưa thấy ai đáng thay")];
-  if (history) {
-    const ft = estimateFreeTransfers_(history.current, history.chips, d.savedTransfers);
-    lines.push("Lượt chuyển miễn phí cho GW" + d.gw + " (ước tính theo luật 1 lượt/vòng, tích tối đa 5): còn " + ft.available +
-      (d.savedTransfers ? ", đã lưu " + d.savedTransfers + " chuyển nhượng cho vòng này" : "") +
-      (ft.hits ? ", đang vượt " + ft.hits + " lượt (mỗi lượt vượt trừ 4 điểm)" : "") + ". Mỗi lượt chuyển vượt mức bị trừ 4 điểm.");
+/**
+ * Free transfers, the suggested swaps and what to do with them, for one manager.
+ * Pure data work: nothing here reaches the AI until transferFacts_ writes it.
+ *
+ * @return {{ft: Object, chipSuspected: boolean, wildcardOpen: boolean, plan: Object|null}|null} null without history
+ */
+function buildTransferPlan_(d, pool, season, history) {
+  if (!pool || !history) return null;
+  const ft = estimateFreeTransfers_(history.current, history.chips, d.savedTransfers);
+  // More saved transfers than the free ones could plausibly cover: a Wildcard or
+  // Free Hit is probably active for the coming gameweek, which the API hides
+  // until the deadline. Never print a large hit as fact.
+  const chipSuspected = d.savedTransfers > ft.free + CHIP_SUSPECT_EXTRA;
+  const wildcardOpen = !!(season && openChip_(season, history.chips, "wildcard", d.gw));
+  let plan = null;
+  if (!chipSuspected) {
+    const bank = Math.round(d.bank * 10);
+    const squad = squadPlayers_(pool, d.squad).map(function (x) {
+      return { id: x.p.id, team: x.p.team, pos: x.p.pos, starter: x.slot <= 11, ep5: round1_(horizonPoints_(pool, x.p, d.gw)) };
+    });
+    plan = planTransfers_(suggestTransfers_(pool, d.squad, d.gw, bank, PLAN_MAX_MOVES), squad, ft.available, bank);
+  }
+  return { ft: ft, chipSuspected: chipSuspected, wildcardOpen: wildcardOpen, plan: plan };
+}
+
+function transferUseText_(m) {
+  if (m.use === "free") return "dùng 1 lượt miễn phí";
+  if (m.use === "hold") return "chưa đáng dùng lượt miễn phí (lời quá ít), nên tích lượt";
+  if (m.use === "hit") return "đáng trả -" + HIT_COST + " điểm vì người bán gần như không đá, lời gần bằng toàn bộ điểm người mua";
+  if (m.dead) return "không đáng trả -" + HIT_COST + " điểm vì người mua chưa đủ mạnh để bù";
+  if (!m.starter) return "không đáng trả -" + HIT_COST + " điểm (người bán ngồi dự bị nên ít ảnh hưởng đến điểm)";
+  return "không đáng trả -" + HIT_COST + " điểm (người bán chưa chắc nghỉ, lời thực tế chỉ khoảng 4-5 điểm)";
+}
+
+function transferFacts_(d, info) {
+  if (!info) {
+    return "CHUYỂN NHƯỢNG gợi ý (chưa biết số lượt miễn phí vì chưa tải được lịch sử chuyển nhượng): " +
+      (d.transfers.length ? d.transfers.map(function (t) {
+        return "bán " + aiShortText_(t.out) + " -> mua " + t.ins.slice(0, 2).map(aiShortText_).join(" hoặc ");
+      }).join(" | ") : "chưa thấy ai đáng thay");
+  }
+  const ft = info.ft;
+  if (info.chipSuspected) {
+    return "CHUYỂN NHƯỢNG: đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + ", vượt xa " + ft.free +
+      " lượt miễn phí, nên nhiều khả năng đã bật Wildcard hoặc Free Hit cho vòng này (FPL chưa cho biết trước hạn chốt). " +
+      "Không tính điểm trừ và không đề xuất thêm chuyển nhượng.";
+  }
+  const plan = info.plan;
+  const lines = [
+    "KẾ HOẠCH CHUYỂN NHƯỢNG cho GW" + d.gw + " (code đã tính sẵn, dùng đúng kết luận). Quy tắc đã chạy lùi 3 mùa: đổi người vẫn đá chỉ lời thực tế khoảng 4-5 điểm/5 vòng " +
+      "(xấp xỉ giá 1 lần -" + HIT_COST + ") nên chỉ dùng lượt miễn phí; chỉ trả -" + HIT_COST + " khi người bán gần như không đá và người mua từ " + DEAD_BUYER_MIN +
+      " điểm/5 vòng. Điểm lời mô hình báo thường cao gấp khoảng 2 lần thực tế.",
+    "Lượt miễn phí còn lại: " + ft.available + " (ước tính từ lịch sử, tối đa " + FREE_TRANSFER_CAP + "). Mỗi chuyển nhượng vượt mức bị trừ " + HIT_COST +
+      " điểm. Tiền trong túi £" + d.bank + "m (giá bán chỉ giữ một nửa phần giá tăng)."
+  ];
+  if (ft.hits > 0) lines.push("Đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + ", vượt " + ft.hits + " lượt nên đang bị trừ " + ft.hits * HIT_COST + " điểm.");
+  else if (d.savedTransfers > 0) lines.push("Đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + " (đã trừ vào số lượt còn lại).");
+
+  plan.moves.forEach(function (m, i) {
+    lines.push((i + 1) + ") Bán " + m.out.name + " (" + m.out.team + ", " + (m.starter ? "đá chính" : "dự bị") + ", 5 vòng " + m.out.ep5 + "đ" +
+      (m.out.news ? ", " + m.out.news : "") + ") -> mua " + m.in.name + " (" + m.in.team + ", 5 vòng " + m.in.ep5 + "đ, £" + m.in.cost + "m): thêm " +
+      m.gain + " điểm dự kiến" + (m.starter ? "" : " (vì vào đá chính thay người yếu nhất cùng vị trí)") + " - " + transferUseText_(m));
+  });
+
+  const doCount = plan.freeUsed + plan.hits;
+  if (!plan.moves.length) {
+    lines.push("KẾT LUẬN: chưa có đổi nào đáng làm; nên giữ đội hình và tích lượt miễn phí (đang có " + ft.available + ").");
+  } else if (!doCount) {
+    lines.push("KẾT LUẬN: tuần này không có đổi nào đáng làm; nên giữ nguyên và tích lượt miễn phí (đang có " + ft.available + ").");
+  } else {
+    lines.push("KẾT LUẬN: nên làm " + doCount + " chuyển nhượng: " + plan.freeUsed + " bằng lượt miễn phí" +
+      (plan.hits ? ", " + plan.hits + " trả -" + HIT_COST + " (tổng -" + plan.hits * HIT_COST + " điểm)" : ", không mất điểm") +
+      "; lời ròng khoảng " + plan.net + " điểm dự kiến trong 5 vòng. Giữ lại " + plan.keep + " lượt miễn phí.");
+  }
+  if (plan.atCap && !plan.freeUsed) {
+    lines.push("LƯU Ý: đang đầy " + FREE_TRANSFER_CAP + " lượt miễn phí, không dùng thì lượt mới tuần sau bị mất.");
+  }
+  if (info.wildcardOpen && plan.worthMoves - ft.available >= WILDCARD_MIN_HITS) {
+    lines.push("LƯU Ý: có " + plan.worthMoves + " đổi đáng làm nhưng chỉ " + ft.available + " lượt miễn phí; thay vì trả nhiều lần -" + HIT_COST +
+      " nên cân nhắc dùng Wildcard (xem phần CHIP).");
   }
   return lines.join("\n");
 }
@@ -221,7 +293,7 @@ function chipsAskedAbout_(question) {
 /** One line of chip state, sent with questions that name no topic at all. */
 function chipBriefFacts_(d, pool, season, history) {
   if (!season || !history) return "CHIP: chưa tải được dữ liệu chip.";
-  const rows = planChips_(pool, season, d.squad, d.gw, history.chips, { doubts: 0, swapGain: 0, swaps: 0, freeTransfers: 0 });
+  const rows = planChips_(pool, season, d.squad, d.gw, history.chips, { doubts: 0, worthMoves: 0, worthGain: 0, freeTransfers: 0 });
   const now = rows.filter(function (r) { return r.state !== "later"; }).map(function (r) {
     if (r.state === "used") return r.label + " đã dùng ở GW" + usedEventOf_(history.chips, r);
     if (r.state === "expired") return r.label + " (GW" + r.start + "-" + r.stop + ") đã hết hạn";
@@ -237,13 +309,18 @@ function usedEventOf_(chips, row) {
   return hit ? hit.event : "?";
 }
 
-function chipFacts_(d, pool, season, history, question) {
+function chipFacts_(d, pool, season, history, question, info) {
   if (!season || !history) return "CHIP: chưa tải được dữ liệu chip.";
   const doubts = d.health.filter(function (h) { return h.why !== "Không có trận vòng này"; }).length;
-  const swapGain = d.transfers.reduce(function (sum, t) { return sum + Math.max(0, (t.ins[0] ? t.ins[0].ep5 : 0) - t.out.ep5); }, 0);
-  const free = estimateFreeTransfers_(history.current, history.chips, d.savedTransfers).available;
-  const rows = planChips_(pool, season, d.squad, d.gw, history.chips,
-    { doubts: doubts, swapGain: swapGain, swaps: d.transfers.length, freeTransfers: free });
+  const plan = info && info.plan;
+  // The Wildcard advice is derived from the same transfer plan the chat shows,
+  // so one answer never says "use a free transfer" and "play a Wildcard" at once.
+  const rows = planChips_(pool, season, d.squad, d.gw, history.chips, {
+    doubts: doubts,
+    worthMoves: plan ? plan.worthMoves : 0,
+    worthGain: plan ? plan.worthGain : 0,
+    freeTransfers: info ? info.ft.available : 0
+  });
   const lines = [];
   // The model once read "Triple Captain: used in GW3" and still said one was
   // left, so a question about a named chip gets its answer stated up front.
@@ -251,6 +328,9 @@ function chipFacts_(d, pool, season, history, question) {
   if (asked.length) {
     lines.push("TRẢ LỜI TRỰC TIẾP (dùng đúng ý này): " + rows.filter(function (r) { return asked.indexOf(r.chip) !== -1; })
       .map(function (r) { return r.advice; }).join(" "));
+  }
+  if (info && info.chipSuspected) {
+    lines.push("LƯU Ý: đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + ", nhiều khả năng đã bật Wildcard hoặc Free Hit cho vòng này (FPL chưa cho biết).");
   }
   lines.push("CHIP (mỗi chip có 2 lượt; mỗi vòng chỉ dùng được 1 chip; điểm dự kiến các vòng sau tính theo phong độ hiện tại):");
   rows.forEach(function (r) { lines.push("- " + r.advice); });
@@ -322,18 +402,24 @@ function buildAiFacts_(d, topics, mentioned, question) {
   const state = getSeasonState();
   const pool = state ? getAdvisorPool_(state.nextGw, state.finishedGws) : null;
   const season = state ? getAdvisorSeason_(state.nextGw, state.finishedGws) : null;
-  const needsHistory = topics.indexOf("chips") !== -1 || topics.indexOf("chipsBrief") !== -1 || topics.indexOf("transfers") !== -1;
-  const history = needsHistory ? getEntryHistory_(d.id, d.gw) : null;
+  const has = function (topic) { return topics.indexOf(topic) !== -1; };
+  // Chips matter for transfers only when the question is about Wildcard / Free
+  // Hit (or no chip in particular); Bench Boost and Triple Captain are not.
+  const asked = chipsAskedAbout_(question);
+  const chipTransfers = has("chips") && (!asked.length || asked.indexOf("wildcard") !== -1 || asked.indexOf("freehit") !== -1);
+  const showPlan = has("transfers") || has("h2h") || has("health") || chipTransfers;
+  const history = has("chips") || has("chipsBrief") || showPlan ? getEntryHistory_(d.id, d.gw) : null;
+  const info = buildTransferPlan_(d, pool, season, history);
 
   const parts = ["HLV " + d.manager + ", vòng sắp tới GW" + d.gw + ", tiền trong túi ước tính £" + d.bank +
     "m. (đ = điểm dự kiến của trợ lý, độ khó 1 dễ - 5 khó)"];
-  if (topics.indexOf("captain") !== -1) parts.push(captainFacts_(d));
-  if (topics.indexOf("h2h") !== -1) parts.push(h2hFacts_(d));
-  if (topics.indexOf("transfers") !== -1) parts.push(transferFacts_(d, history));
-  if (topics.indexOf("health") !== -1) parts.push(healthFacts_(d));
-  if (topics.indexOf("chips") !== -1 && pool) parts.push(chipFacts_(d, pool, season, history, question));
-  else if (topics.indexOf("chipsBrief") !== -1 && pool) parts.push(chipBriefFacts_(d, pool, season, history));
-  if (topics.indexOf("league") !== -1 && state) parts.push(leagueFacts_(d.manager, state));
+  if (has("captain")) parts.push(captainFacts_(d));
+  if (has("h2h")) parts.push(h2hFacts_(d));
+  if (showPlan) parts.push(transferFacts_(d, info));
+  if (has("health")) parts.push(healthFacts_(d));
+  if (has("chips") && pool) parts.push(chipFacts_(d, pool, season, history, question, info));
+  else if (has("chipsBrief") && pool) parts.push(chipBriefFacts_(d, pool, season, history));
+  if (has("league") && state) parts.push(leagueFacts_(d.manager, state));
   if (mentioned.length && pool) {
     parts.push("CẦU THỦ ĐƯỢC HỎI:\n" + mentioned.map(function (id) {
       return aiPlayerText_(describePlayer_(pool, advisorPlayer_(pool, id), d.gw), season, d.gw);

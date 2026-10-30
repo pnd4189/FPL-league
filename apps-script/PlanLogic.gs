@@ -14,8 +14,24 @@
 
 const CHIP_LABELS = { wildcard: "Wildcard", freehit: "Free Hit", bboost: "Bench Boost", "3xc": "Triple Captain" };
 const FREE_HIT_MIN_BLANKS = 3;     // starters without a match before Free Hit is worth it
-const WILDCARD_MIN_DOUBTS = 3;     // squad members injured or doubtful
-const WILDCARD_MIN_GAIN = 20;      // expected points over 5 gameweeks from the top swaps
+
+// Transfer rules of the game.
+const HIT_COST = 4;                // points lost for every transfer beyond the free ones
+const FREE_TRANSFER_CAP = 5;       // free transfers that can be banked
+// Thresholds below come from a walk-forward backtest on three past seasons
+// (tools/advisor-model/calibrate_transfers.py). The model's predicted gain of a
+// swap is about twice what it really adds (slope 0.51), and a swap of a player
+// who still plays adds ~4.7 points over five gameweeks whatever the predicted
+// gain between 6 and 14 -- about the price of one hit, so a hit does not pay.
+// When the seller will not play at all, the swap adds the buyer's own points
+// (15-20 over five gameweeks, above 4 in 92% of cases), so a hit does pay.
+const FREE_MIN_GAIN = 2;           // predicted gain below which a free transfer is better kept (rule of thumb)
+const WORTH_GAIN = 6;              // predicted gain of a swap "worth making"; counts towards the Wildcard rule
+const DEAD_EP5 = 1;                // five-gameweek points of a starter who will not play
+const DEAD_BUYER_MIN = 12;         // five-gameweek points a buyer needs for a hit to be worth it
+const WILDCARD_MIN_HITS = 2;       // hits a manager would pay before a Wildcard is worth considering
+const PLAN_MAX_MOVES = 5;          // swaps weighed in one plan
+const CHIP_SUSPECT_EXTRA = 2;      // saved transfers beyond free + this suggest a Wildcard / Free Hit is active
 
 /** Expected points of a player in gameweek w, from today's form and fitness. */
 function xpInGameweek_(pool, season, p, w) {
@@ -38,8 +54,9 @@ function matchesIn_(season, team, w) {
  * @param {Array<{el:number, slot:number}>} squad
  * @param {number} gw the coming gameweek
  * @param {Array<{name: string, event: number}>} used chips already played
- * @param {{doubts: number, swapGain: number, swaps: number, freeTransfers: number}} signals for the Wildcard rule:
- *   injured or doubtful members, expected-point gain and count of the suggested swaps, free transfers
+ * @param {{doubts: number, worthMoves: number, worthGain: number, freeTransfers: number}} signals for the Wildcard
+ *   rule, taken from the transfer plan: injured or doubtful members, swaps worth a hit and their expected-point gain,
+ *   free transfers available
  * @return {Array<Object>} one row per chip window, with a ready-made `advice` sentence
  */
 function planChips_(pool, season, squad, gw, used, signals) {
@@ -51,25 +68,37 @@ function planChips_(pool, season, squad, gw, used, signals) {
   const rows = [];
   for (const rule of season.chips) {
     const label = CHIP_LABELS[rule.name] || rule.name;
-    const usedHere = used.filter(function (u) { return u.name === rule.name && u.event >= rule.start && u.event <= rule.stop; })[0];
-    const row = { chip: rule.name, label: label, start: rule.start, stop: rule.stop };
+    const status = chipState_(rule, used, gw);
+    const row = { chip: rule.name, label: label, start: rule.start, stop: rule.stop, state: status.state };
 
-    if (usedHere) {
-      row.state = "used";
-      row.advice = label + " (GW" + rule.start + "-" + rule.stop + "): đã dùng ở GW" + usedHere.event + ", KHÔNG còn dùng được trong lượt này.";
-    } else if (gw > rule.stop) {
-      row.state = "expired";
+    if (status.state === "used") {
+      row.advice = label + " (GW" + rule.start + "-" + rule.stop + "): đã dùng ở GW" + status.usedAt + ", KHÔNG còn dùng được trong lượt này.";
+    } else if (status.state === "expired") {
       row.advice = label + " (GW" + rule.start + "-" + rule.stop + "): đã hết hạn mà chưa dùng.";
-    } else if (rule.start > gw) {
-      row.state = "later";
+    } else if (status.state === "later") {
       row.advice = label + " lượt sau: mở từ GW" + rule.start + " đến GW" + rule.stop + ".";
     } else {
-      row.state = "available";
       row.advice = adviseChip_(pool, season, rule, label, gw, starters, bench, clubs, signals);
     }
     rows.push(row);
   }
   return rows;
+}
+
+/** Where one chip window stands: used (and when), expired, not open yet, or available now. */
+function chipState_(rule, used, gw) {
+  const usedHere = used.filter(function (u) { return u.name === rule.name && u.event >= rule.start && u.event <= rule.stop; })[0];
+  if (usedHere) return { state: "used", usedAt: usedHere.event };
+  if (gw > rule.stop) return { state: "expired" };
+  if (rule.start > gw) return { state: "later" };
+  return { state: "available" };
+}
+
+/** The chip window of this name that can be played now, or null. */
+function openChip_(season, used, name, gw) {
+  return season.chips.filter(function (rule) {
+    return rule.name === name && chipState_(rule, used, gw).state === "available";
+  })[0] || null;
 }
 
 function adviseChip_(pool, season, rule, label, gw, starters, bench, clubs, signals) {
@@ -124,50 +153,155 @@ function adviseChip_(pool, season, rule, label, gw, starters, bench, clubs, sign
   }
 
   if (rule.name === "wildcard") {
-    // A Wildcard only beats free transfers when more changes are worth making
-    // than the free transfers cover (each extra one costs 4 points).
-    const gain = round1_(signals.swapGain);
+    // A Wildcard beats free transfers only when several swaps are worth making
+    // and the free transfers do not cover them (each extra one costs HIT_COST).
     const free = signals.freeTransfers;
-    if (signals.swaps <= free) {
-      return label + ": " + window + ". Chưa cần Wildcard: trợ lý gợi ý " + signals.swaps + " thay đổi, vừa đủ với " + free +
-        " lượt chuyển miễn phí (ước tính).";
+    const worth = signals.worthMoves;
+    const needed = Math.max(0, worth - free);
+    const head = label + ": " + window + ". ";
+    if (worth <= free) {
+      return head + "Chưa cần Wildcard: có " + worth + " thay đổi đáng làm (mỗi đổi thêm từ " + WORTH_GAIN +
+        " điểm dự kiến trong 5 vòng), đủ trong " + free + " lượt miễn phí (ước tính).";
     }
-    const worth = signals.doubts >= WILDCARD_MIN_DOUBTS || signals.swapGain >= WILDCARD_MIN_GAIN;
-    if (worth) {
-      return label + ": " + window + ". Nên cân nhắc Wildcard ngay vòng này: trợ lý gợi ý " + signals.swaps + " thay đổi nhưng chỉ có " + free +
-        " lượt chuyển miễn phí (ước tính, mỗi lượt vượt trừ 4 điểm), trong khi các thay đổi đó thêm khoảng " + gain +
-        " điểm dự kiến trong 5 vòng; đội có " + signals.doubts + " cầu thủ chấn thương hoặc nghi ngờ.";
+    if (needed < WILDCARD_MIN_HITS) {
+      return head + "Chưa cần Wildcard: có " + worth + " thay đổi đáng làm, chỉ vượt " + needed + " lượt so với " + free +
+        " lượt miễn phí (ước tính), chịu -" + needed * HIT_COST + " điểm là xong.";
     }
-    return label + ": " + window + ". Chưa cần Wildcard: các thay đổi gợi ý chỉ thêm khoảng " + gain + " điểm dự kiến trong 5 vòng.";
+    return head + "Nên cân nhắc Wildcard ngay vòng này: có " + worth + " thay đổi đáng làm (thêm khoảng " + round1_(signals.worthGain) +
+      " điểm dự kiến trong 5 vòng) nhưng chỉ có " + free + " lượt miễn phí (ước tính); đổi từng người sẽ mất -" + needed * HIT_COST +
+      " điểm, Wildcard sửa tất cả không mất điểm. Đội có " + signals.doubts + " cầu thủ chấn thương hoặc nghi ngờ.";
   }
 
   return label + ": " + window + ".";
 }
 
 /**
- * Free transfers available for the coming gameweek, rebuilt from history.
- * Assumed rules (not published by the API, so this is an estimate): one free
- * transfer per gameweek after a team's first, at most five banked, and a
- * Wildcard or Free Hit week does not use banked transfers.
+ * Free transfers for the coming gameweek, rebuilt from history. The public API
+ * has no such field (`my-team` needs a login), so this is an estimate. The
+ * rules, checked against all 98 manager-gameweeks of GW2-8: one free transfer
+ * per gameweek, at most five banked, transfers made beyond the free ones cost
+ * four points, and a Wildcard or Free Hit week freezes the bank (nothing is
+ * spent and no new transfer is earned that week). Adding a transfer for the
+ * week after a chip, as the official text might suggest, mispredicted the hits
+ * of four managers.
+ *
+ * Cannot see a chip already active for the coming gameweek, or a one-off
+ * top-up the game may grant.
  *
  * @param {Array<{event: number, event_transfers: number, event_transfers_cost: number}>} current entry history rows
  * @param {Array<{name: string, event: number}>} chips played
  * @param {number} savedMoves transfers already made for the coming gameweek
- * @return {{available: number, hits: number}} free transfers left, and how many more would cost points
+ * @return {{free: number, available: number, hits: number}} free transfers banked, how many are left after the
+ *   saved moves, and how many saved moves already cost points
  */
 function estimateFreeTransfers_(current, chips, savedMoves) {
   const chipAt = {};
   for (const c of chips) chipAt[c.event] = c.name;
   const rows = current.slice().sort(function (a, b) { return a.event - b.event; });
-  let free = 0;
-  rows.forEach(function (row, i) {
-    if (i > 0 && chipAt[row.event] !== "wildcard" && chipAt[row.event] !== "freehit") {
-      const paid = Math.round((row.event_transfers_cost || 0) / 4);
-      free = Math.max(0, free - Math.max(0, (row.event_transfers || 0) - paid));
-    }
-    free = Math.min(5, free + 1);
+  // The first row is the opening squad, built without limit; the next gameweek starts with one.
+  let free = rows.length ? 1 : 0;
+  rows.slice(1).forEach(function (row) {
+    if (chipAt[row.event] === "wildcard" || chipAt[row.event] === "freehit") return;
+    const paid = Math.round((row.event_transfers_cost || 0) / HIT_COST);
+    const spent = Math.max(0, (row.event_transfers || 0) - paid);
+    free = Math.min(FREE_TRANSFER_CAP, Math.max(0, free - spent) + 1);
   });
-  return { available: Math.max(0, free - savedMoves), hits: Math.max(0, savedMoves - free) };
+  return { free: free, available: Math.max(0, free - savedMoves), hits: Math.max(0, savedMoves - free) };
+}
+
+/**
+ * Decide which suggested swaps are worth making this week, within the money,
+ * the three-players-per-club limit and the free transfers.
+ *
+ * A swap's gain is the expected points over five gameweeks it adds to the XI:
+ * the incoming player minus the outgoing one when a starter leaves, or minus
+ * the weakest starter of that position when a bench player leaves (the better
+ * buy takes the place in the XI).
+ *
+ * @param {Array} ideas from suggestTransfers_: {out, starter, ins[]}
+ * @param {Array<{id: number, team: string, pos: number, starter: boolean, ep5: number}>} squad the 15 players
+ * @param {number} free free transfers available
+ * @param {number} bank money in the bank, tenths of a million
+ * @return {{moves: Array, free: number, atCap: boolean, freeUsed: number, hits: number, net: number,
+ *   worthMoves: number, worthGain: number, keep: number}} moves carry use: free | hold | hit | skip and dead (the
+ *   seller is a starter who will not play)
+ */
+function planTransfers_(ideas, squad, free, bank) {
+  let money = bank;
+  const clubs = {};
+  const xi = [];
+  for (const m of squad) {
+    clubs[m.team] = (clubs[m.team] || 0) + 1;
+    if (m.starter) xi.push({ id: m.id, pos: m.pos, ep5: m.ep5 });
+  }
+
+  const weakestOf = function (pos) {
+    let at = -1;
+    xi.forEach(function (s, i) { if (s.pos === pos && (at === -1 || s.ep5 < xi[at].ep5)) at = i; });
+    return at;
+  };
+  const gainOf = function (idea, cand) {
+    if (idea.starter) return cand.ep5 - idea.out.ep5;
+    const at = weakestOf(cand.pos);
+    return at === -1 ? 0 : cand.ep5 - xi[at].ep5;
+  };
+
+  const order = ideas.map(function (idea) {
+    return { idea: idea, best: Math.max.apply(null, idea.ins.map(function (c) { return gainOf(idea, c); })) };
+  }).sort(function (a, b) { return b.best - a.best; });
+
+  const taken = {};
+  const moves = [];
+  for (const entry of order) {
+    const idea = entry.idea;
+    const sellOut = Math.round((idea.out.sell !== undefined ? idea.out.sell : idea.out.cost) * 10);
+    let pick = null;
+    for (const cand of idea.ins) {
+      const price = Math.round(cand.cost * 10);
+      const clubAfter = (clubs[cand.team] || 0) - (cand.team === idea.out.team ? 1 : 0);
+      if (taken[cand.id] || price > money + sellOut || clubAfter >= ADVISOR_MAX_PER_CLUB) continue;
+      const gain = gainOf(idea, cand);
+      if (!pick || gain > pick.gain) pick = { cand: cand, gain: gain, price: price };
+    }
+    if (!pick || pick.gain <= 0) continue;
+
+    moves.push({ out: idea.out, in: pick.cand, starter: idea.starter, gain: round1_(pick.gain) });
+    money += sellOut - pick.price;
+    clubs[idea.out.team] -= 1;
+    clubs[pick.cand.team] = (clubs[pick.cand.team] || 0) + 1;
+    taken[pick.cand.id] = true;
+    const at = idea.starter ? xi.findIndex(function (s) { return s.id === idea.out.id; }) : weakestOf(pick.cand.pos);
+    if (at !== -1) xi[at] = { id: pick.cand.id, pos: pick.cand.pos, ep5: pick.cand.ep5 };
+  }
+
+  moves.sort(function (a, b) { return b.gain - a.gain; });
+  const atCap = free >= FREE_TRANSFER_CAP;
+  let freeUsed = 0;
+  let hits = 0;
+  let gained = 0;
+  let worthMoves = 0;
+  let worthGain = 0;
+  moves.forEach(function (m, i) {
+    // A starter who will not play: the swap adds the buyer's own points.
+    m.dead = m.starter && m.out.ep5 <= DEAD_EP5;
+    if (m.gain >= WORTH_GAIN) {
+      worthMoves++;
+      worthGain += m.gain;
+    }
+    if (i < free) {
+      // A free transfer at the cap is lost if unused, so any gain is worth taking.
+      m.use = m.gain >= FREE_MIN_GAIN || (atCap && m.gain > 0) ? "free" : "hold";
+    } else {
+      m.use = m.dead && m.gain >= DEAD_BUYER_MIN ? "hit" : "skip";
+    }
+    if (m.use === "free") freeUsed++;
+    if (m.use === "hit") hits++;
+    if (m.use === "free" || m.use === "hit") gained += m.gain;
+  });
+  return {
+    moves: moves, free: free, atCap: atCap, freeUsed: freeUsed, hits: hits,
+    net: round1_(gained - HIT_COST * hits), worthMoves: worthMoves, worthGain: round1_(worthGain), keep: free - freeUsed
+  };
 }
 
 /**

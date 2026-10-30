@@ -11,6 +11,8 @@
  * code that unlocks the chat. Neither is ever returned to the browser or logged.
  */
 
+// Bump when the facts a comment is written from change, so old comments are rewritten once.
+const AI_REVIEW_VERSION = 2;
 const AI_REVIEW_BUSY_TTL = 100;      // seconds — a comment being written blocks a second writer
 const AI_REVIEW_FAIL_TTL = 1800;     // seconds — after a failure, don't retry the same numbers
 const AI_REVIEW_DAILY_LIMIT = 120;   // comments written per day, a safety net against a loop
@@ -29,6 +31,7 @@ const AI_RULES =
   "Viết bằng tiếng Việt đời thường, thân thiện, lịch sự, ngắn gọn, dễ hiểu, không dùng thuật ngữ khó, không dùng markdown. " +
   "Xưng \"mình\", gọi người hỏi bằng tên HLV hoặc \"bạn\"; không bao giờ dùng \"mày\", \"tao\" hay từ thô. " +
   "CHỈ dùng các cầu thủ, con số và kết luận có trong phần DỮ LIỆU; không tự tính toán hay so sánh lại số liệu; " +
+  "Khi DỮ LIỆU có KẾ HOẠCH CHUYỂN NHƯỢNG: nêu tên cầu thủ nên bán và nên mua, nói rõ nên dùng bao nhiêu lượt miễn phí và có đáng trả -4 điểm hay không, đúng theo phần KẾT LUẬN; không tự đổi kết luận. " +
   "không thêm cầu thủ, số liệu, tin tức hay kết quả trận đấu nào khác. " +
   "Nếu câu hỏi cần thông tin không có trong DỮ LIỆU (tin họp báo, đội hình ra sân dự kiến, tin đồn...) thì nói rõ là chưa có dữ liệu thay vì đoán. " +
   "Không tự khuyên dùng chip nào nếu DỮ LIỆU không nói nên dùng chip đó. " +
@@ -90,6 +93,7 @@ function hashText_(text) {
  */
 function reviewFingerprint_(d) {
   return hashText_([
+    AI_REVIEW_VERSION,
     d.gw, d.id, d.savedTransfers, d.bank,
     d.captains.map(function (p) { return p.id; }).join(","),
     d.opponent ? d.opponent.id + ":" + h2hLead_(d) : "none",

@@ -15,13 +15,15 @@
  *
  * A pool is the compact snapshot built by Advisor.gs:
  *   { gw, players: {id: [name, team, pos, cost, ep_next (unused), form, chance,
- *                        status, minutes, news, sel, ppg, starts, xgi90]},
+ *                        status, minutes, news, sel, ppg, starts, xgi90, startCost]},
  *     played, fixtures: {club: [{gw, opp, home, fdr}, ...]} }
- * and a squad is [{el, slot}] with slots 1-11 starting and 12-15 on the bench.
+ * and a squad is [{el, slot, sell}] with slots 1-11 starting and 12-15 on the bench;
+ * `sell` is the selling price in tenths of a million (half the price rise is kept).
  */
 
 const ADVISOR_HORIZON = 5;      // gameweeks of fixtures considered for transfers
 const ADVISOR_DOUBT_BELOW = 75; // chance of playing (%) under which a player is a doubt
+const ADVISOR_MAX_PER_CLUB = 3; // players of one club a squad may hold
 
 // Coefficients per position (1 GK, 2 DEF, 3 MID, 4 FWD) for the features
 // [1, ppg, form, xgi90, minShare, a, home, ppg*a, ppg*home, price, price*a]
@@ -40,7 +42,7 @@ function advisorPlayer_(pool, id) {
   return {
     id: Number(id), name: r[0], team: r[1], pos: r[2], cost: r[3], ep: r[4], form: r[5],
     chance: r[6], status: r[7], minutes: r[8], news: r[9], sel: r[10],
-    ppg: r[11], starts: r[12], xgi: r[13]
+    ppg: r[11], starts: r[12], xgi: r[13], start: r[14]
   };
 }
 
@@ -128,7 +130,7 @@ function squadPlayers_(pool, squad) {
   const out = [];
   for (const pick of squad) {
     const p = advisorPlayer_(pool, pick.el);
-    if (p) out.push({ slot: pick.slot, p: p });
+    if (p) out.push({ slot: pick.slot, p: p, sell: pick.sell });
   }
   return out;
 }
@@ -226,29 +228,36 @@ function findDifferentials_(pool, mine, theirs, gw, limit) {
 
 /**
  * Replacement ideas for the weakest squad members, doubts first. Candidates
- * keep the position, fit the budget (sale value is approximated by the current
- * price, so the real bank can differ a little) and must clearly beat the player
- * they replace.
+ * keep the position, fit the budget (the outgoing player's selling price plus
+ * the bank), keep the squad at three players per club or fewer, and must
+ * clearly beat the player they replace.
  *
  * @param {number} bank money in the bank, in tenths of a million
  */
 function suggestTransfers_(pool, squad, gw, bank, limit) {
   const members = squadPlayers_(pool, squad);
   const owned = {};
-  for (const x of members) owned[x.p.id] = true;
+  const perClub = {};
+  for (const x of members) {
+    owned[x.p.id] = true;
+    perClub[x.p.team] = (perClub[x.p.team] || 0) + 1;
+  }
 
   const weakest = members
-    .map(function (x) { return { p: x.p, value: playerValue_(pool, x.p, gw) }; })
+    .map(function (x) {
+      return { p: x.p, slot: x.slot, sell: x.sell === undefined ? x.p.cost : x.sell, value: playerValue_(pool, x.p, gw) };
+    })
     .sort(function (a, b) { return a.value - b.value; })
     .slice(0, limit);
 
   const ideas = [];
   for (const weak of weakest) {
-    const budget = weak.p.cost + bank;
+    const budget = weak.sell + bank;
     const candidates = [];
     for (const id of Object.keys(pool.players)) {
       const c = advisorPlayer_(pool, id);
       if (c.pos !== weak.p.pos || owned[c.id] || c.cost > budget) continue;
+      if ((perClub[c.team] || 0) - (c.team === weak.p.team ? 1 : 0) >= ADVISOR_MAX_PER_CLUB) continue;
       if (c.status !== "a" || isDoubtful_(c) || c.minutes <= 0) continue;
       const value = playerValue_(pool, c, gw);
       // A swap must gain at least a point over the next gameweeks to be worth a transfer.
@@ -257,8 +266,11 @@ function suggestTransfers_(pool, squad, gw, bank, limit) {
     candidates.sort(function (a, b) { return b.value - a.value; });
     if (!candidates.length) continue;
 
+    const out = describePlayer_(pool, weak.p, gw);
+    out.sell = weak.sell / 10;
     ideas.push({
-      out: describePlayer_(pool, weak.p, gw),
+      out: out,
+      starter: weak.slot <= 11,
       outDifficulty: Math.round(fixtureDifficulty_(pool, weak.p.team, gw, ADVISOR_HORIZON) * 10) / 10,
       ins: candidates.slice(0, 3).map(function (x) {
         const row = describePlayer_(pool, x.c, gw);
