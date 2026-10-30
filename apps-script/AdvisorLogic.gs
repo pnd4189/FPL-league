@@ -3,19 +3,35 @@
  * HTCV FPL 2026-2027
  *
  * Pure logic with no FPL or spreadsheet access, so it can be replayed against
- * saved data. Everything ranks on FPL's own expected points (`ep_next`), which
- * already prices in opponent strength and minutes, then nudges by form and by
- * the fixture run.
+ * saved data.
+ *
+ * Expected points come from our own model, not FPL's `ep_next`: this season
+ * `ep_next` equals `form` (the last three gameweeks / 3) for 89% of players and
+ * ignores the opponent. The model is a least-squares fit, one per position, of
+ * a player's next-gameweek points on season points per appearance, form,
+ * xG + xA per 90, share of minutes played, fixture difficulty, venue and price.
+ * Fitted on 2023-24 and 2024-25 and checked out of sample on three seasons
+ * (corr 0.24 for form alone vs 0.31) and on 2026-27 GW5-8 (0.14 vs 0.22).
  *
  * A pool is the compact snapshot built by Advisor.gs:
- *   { gw, players: {id: [name, team, pos, cost, ep, form, chance, status,
- *                        minutes, news, sel, ppg, starts, xgi90]}, played,
- *                        fixtures: {club: [{gw, opp, home, fdr}, ...]} }
+ *   { gw, players: {id: [name, team, pos, cost, ep_next (unused), form, chance,
+ *                        status, minutes, news, sel, ppg, starts, xgi90]},
+ *     played, fixtures: {club: [{gw, opp, home, fdr}, ...]} }
  * and a squad is [{el, slot}] with slots 1-11 starting and 12-15 on the bench.
  */
 
 const ADVISOR_HORIZON = 5;      // gameweeks of fixtures considered for transfers
 const ADVISOR_DOUBT_BELOW = 75; // chance of playing (%) under which a player is a doubt
+
+// Coefficients per position (1 GK, 2 DEF, 3 MID, 4 FWD) for the features
+// [1, ppg, form, xgi90, minShare, a, home, ppg*a, ppg*home, price, price*a]
+// where a = 3 - fixture difficulty and price is in millions.
+const ADVISOR_XP_COEF = {
+  1: [-0.30897, -0.08262, 0.32098, 0.52714, 1.81827, -0.32885, 0.5717, -0.00287, -0.18857, 0.1684, 0.12642],
+  2: [-1.13039, -0.06361, 0.30311, 0.42625, 1.42807, 0.0412, 0.13321, 0.04686, -0.0179, 0.32408, 0.0334],
+  3: [-0.87967, -0.00649, 0.31352, 0.25346, 1.60633, -0.06981, -0.15535, 0.0682, 0.11844, 0.23919, 0.01971],
+  4: [-0.28389, -0.10369, 0.29504, 0.26023, 2.56132, -0.13825, -0.05212, 0.10554, 0.07994, 0.12355, 0.0147]
+};
 
 /** @return {Object|null} the pool record of an element as a named object */
 function advisorPlayer_(pool, id) {
@@ -48,20 +64,61 @@ function fixtureDifficulty_(pool, teamShort, gw, horizon) {
   return run.reduce(function (sum, f) { return sum + f.fdr; }, 0) / run.length;
 }
 
+/** Model estimate of a player's points in one fixture. */
+function fixtureXp_(pool, p, f) {
+  // Shares of possible minutes, and a threat rate that is only trusted once the
+  // player has a few full matches behind it.
+  const share = pool.played > 0 ? Math.min(1, p.minutes / (90 * pool.played)) : 1;
+  const xgi = p.minutes >= 180 ? Math.min(p.xgi, 1.5) : 0;
+  const a = 3 - f.fdr;
+  const home = f.home ? 1 : 0;
+  const price = p.cost / 10;
+  const x = [1, p.ppg, p.form, xgi, share, a, home, p.ppg * a, p.ppg * home, price, price * a];
+  const c = ADVISOR_XP_COEF[p.pos];
+  let total = 0;
+  for (let i = 0; i < x.length; i++) total += c[i] * x[i];
+  return Math.max(0, total);
+}
+
+/** Chance (0-1) that FPL's news lets a player take the field at all. */
+function availability_(p) {
+  return p.status === "i" || p.status === "s" || p.status === "u" || p.status === "n" ? 0 : p.chance / 100;
+}
+
+/** Expected points in one gameweek (a blank gameweek is 0, a double sums both). */
+function expectedPoints_(pool, p, gw) {
+  let total = 0;
+  for (const f of fixturesIn_(pool, p.team, gw)) total += fixtureXp_(pool, p, f);
+  return total * availability_(p);
+}
+
 /**
- * How much a player is worth keeping or buying: expected points, plus a small
- * credit for form and for an easy fixture run (3 is neutral). Doubts rank last.
+ * Expected points over the next gameweeks. The model is fitted one gameweek
+ * ahead, so later gameweeks reuse today's form: a rough guide to fixture runs.
  */
+function horizonPoints_(pool, p, gw) {
+  let total = 0;
+  for (const f of (pool.fixtures[p.team] || [])) {
+    if (f.gw >= gw && f.gw < gw + ADVISOR_HORIZON) total += fixtureXp_(pool, p, f);
+  }
+  return total * availability_(p);
+}
+
+/** How much a player is worth keeping or buying: expected points over the run. Doubts rank last. */
 function playerValue_(pool, p, gw) {
-  const run = fixtureDifficulty_(pool, p.team, gw, ADVISOR_HORIZON);
-  const value = p.ep + 0.1 * p.form + 0.5 * (3 - run);
+  const value = horizonPoints_(pool, p, gw);
   return isDoubtful_(p) ? value - 100 : value;
+}
+
+function round1_(x) {
+  return Math.round(x * 10) / 10;
 }
 
 function describePlayer_(pool, p, gw) {
   return {
     id: p.id, name: p.name, team: p.team, pos: p.pos, cost: p.cost / 10,
-    ep: p.ep, form: p.form, ppg: p.ppg, xgi: p.xgi, chance: p.chance, news: p.news, sel: p.sel,
+    ep: round1_(expectedPoints_(pool, p, gw)), ep5: round1_(horizonPoints_(pool, p, gw)),
+    form: p.form, ppg: p.ppg, xgi: p.xgi, chance: p.chance, news: p.news, sel: p.sel,
     fixtures: fixturesIn_(pool, p.team, gw)
   };
 }
@@ -74,25 +131,6 @@ function squadPlayers_(pool, squad) {
     if (p) out.push({ slot: pick.slot, p: p });
   }
   return out;
-}
-
-/**
- * How good an armband a player is. Expected points and form are one-week
- * signals that let a defender who just scored top the list, so the score leans
- * on what makes a real captain: steady season-long scoring (points per game),
- * goal threat (xG + xA per 90), a premium price as the mark of a key player, an
- * easy home fixture, and a place in the team every week.
- */
-function captainScore_(pool, p, gw) {
-  const base = 0.35 * p.ppg + 0.25 * p.ep + 0.15 * p.form;
-  // Threat only counts once the sample is meaningful.
-  const threat = 2 * Math.min(p.xgi, 1.2) * Math.min(1, p.minutes / 270);
-  const premium = Math.min(3, Math.max(0, (p.cost / 10 - 6) / 2)) * 0.3;
-  let fixture = 0;
-  for (const f of fixturesIn_(pool, p.team, gw)) fixture += (3 - f.fdr) * 0.6 + (f.home ? 0.4 : 0);
-  const startShare = pool.played > 0 ? p.starts / pool.played : 1;
-  const rotation = startShare < 0.6 ? (0.6 - startShare) / 0.6 * 3 : 0;
-  return base + threat + premium + fixture - rotation;
 }
 
 /** Plain-language reasons a player makes the captain list. */
@@ -109,16 +147,17 @@ function captainReasons_(pool, p, gw) {
 }
 
 /**
- * Top captain options among the starters, best first. Only midfielders and
- * forwards are considered — defenders and goalkeepers have a low ceiling and
- * nobody armbands them — and doubts or players without a match are left out.
+ * Top captain options among the starters, best expected points first. Only
+ * midfielders and forwards are considered — defenders and goalkeepers have a
+ * low ceiling and nobody armbands them — and doubts or players without a match
+ * are left out.
  */
 function rankCaptains_(pool, squad, gw, limit) {
   return squadPlayers_(pool, squad)
     .filter(function (x) {
       return x.slot <= 11 && x.p.pos >= 3 && !isDoubtful_(x.p) && fixturesIn_(pool, x.p.team, gw).length > 0;
     })
-    .map(function (x) { return { p: x.p, score: captainScore_(pool, x.p, gw) }; })
+    .map(function (x) { return { p: x.p, score: expectedPoints_(pool, x.p, gw) }; })
     .sort(function (a, b) { return b.score - a.score; })
     .slice(0, limit)
     .map(function (x) {
@@ -156,7 +195,7 @@ function projectedPoints_(pool, squad, gw) {
   let best = 0;
   for (const x of starters) {
     const playing = !isDoubtful_(x.p) && fixturesIn_(pool, x.p.team, gw).length > 0;
-    const ep = playing ? x.p.ep : 0;
+    const ep = playing ? expectedPoints_(pool, x.p, gw) : 0;
     total += ep;
     if (ep > best) best = ep;
   }
@@ -178,7 +217,7 @@ function findDifferentials_(pool, mine, theirs, gw, limit) {
   const pick = function (squad, otherIds) {
     return squadPlayers_(pool, squad)
       .filter(function (x) { return x.slot <= 11 && !otherIds[x.p.id]; })
-      .sort(function (a, b) { return b.p.ep - a.p.ep; })
+      .sort(function (a, b) { return expectedPoints_(pool, b.p, gw) - expectedPoints_(pool, a.p, gw); })
       .slice(0, limit)
       .map(function (x) { return describePlayer_(pool, x.p, gw); });
   };
@@ -212,7 +251,8 @@ function suggestTransfers_(pool, squad, gw, bank, limit) {
       if (c.pos !== weak.p.pos || owned[c.id] || c.cost > budget) continue;
       if (c.status !== "a" || isDoubtful_(c) || c.minutes <= 0) continue;
       const value = playerValue_(pool, c, gw);
-      if (value >= weak.value + 0.5) candidates.push({ c: c, value: value });
+      // A swap must gain at least a point over the next gameweeks to be worth a transfer.
+      if (value >= weak.value + 1) candidates.push({ c: c, value: value });
     }
     candidates.sort(function (a, b) { return b.value - a.value; });
     if (!candidates.length) continue;
@@ -230,7 +270,7 @@ function suggestTransfers_(pool, squad, gw, bank, limit) {
   return ideas;
 }
 
-/** "Tìm nhanh": best available players of a position within a price cap. */
+/** "Tìm nhanh": players of a position within a price cap with the most expected points over the next gameweeks. */
 function huntPlayers_(pool, gw, pos, maxCost, limit) {
   const found = [];
   for (const id of Object.keys(pool.players)) {

@@ -63,7 +63,7 @@ const PlayerLine: React.FC<{ p: AdvisorPlayer; showCost?: boolean }> = ({ p, sho
     <div className="text-right flex-shrink-0">
       <p className="text-sm font-mono font-black" style={{ color: 'var(--accent-primary)' }}>{p.ep.toFixed(1)} <span className="text-[9px] font-normal" style={{ color: 'var(--text-faint)' }}>điểm dự kiến</span></p>
       <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
-        Form {p.form.toFixed(1)}{showCost ? ` · £${p.cost.toFixed(1)}m` : ''}{p.difficulty !== undefined ? ` · Lịch ${p.difficulty.toFixed(1)}` : ''}
+        Form {p.form.toFixed(1)}{showCost ? ` · £${p.cost.toFixed(1)}m` : ''}{p.ep5 !== undefined && showCost ? ` · 5 vòng ${p.ep5.toFixed(1)}đ` : ''}{p.difficulty !== undefined ? ` · Lịch ${p.difficulty.toFixed(1)}` : ''}
       </p>
     </div>
   </div>
@@ -136,7 +136,7 @@ export const AdvisorView: React.FC = () => {
             </h3>
           </div>
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            Gợi ý captain, đối đầu H2H và chuyển nhượng dựa trên điểm dự đoán, phong độ, chấn thương và độ khó lịch thi đấu của FPL.
+            Gợi ý captain, đối đầu H2H và chuyển nhượng dựa trên điểm dự kiến do trợ lý tự tính từ điểm trung bình mùa, phong độ, xG+xA, số phút thi đấu, độ khó trận, sân nhà và giá (khớp trên dữ liệu 3 mùa trước), không phải con số của FPL.
             {deadline ? ` Hạn chốt đội: ${deadline}.` : ''}
           </p>
         </div>
@@ -172,7 +172,7 @@ export const AdvisorView: React.FC = () => {
           </p>
 
           <Card icon={<Crown className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />} title="Captain nên chọn"
-            hint="Chỉ xét tiền vệ và tiền đạo đá chính. Xếp theo độ đều điểm cả mùa, khả năng ghi bàn/kiến tạo, giá cầu thủ (key player), phong độ và độ khó trận đấu. Người nghi ngờ chấn thương, hay ngồi dự bị luân phiên hoặc không có trận bị loại hoặc bị trừ điểm.">
+            hint="Chỉ xét tiền vệ và tiền đạo đá chính, xếp theo điểm dự kiến của trợ lý. Người nghi ngờ chấn thương hoặc không có trận bị loại.">
             {advice.captains.length ? advice.captains.map((p, i) => (
               <div key={p.id} className="flex items-center gap-3">
                 <span className="text-lg font-black w-5 text-center" style={{ color: i === 0 ? 'var(--accent-gold)' : 'var(--text-faint)' }}>{i + 1}</span>

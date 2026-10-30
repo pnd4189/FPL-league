@@ -246,7 +246,8 @@ export interface AdvisorPlayer {
   team: string;
   pos: number;       // 1 GK, 2 DEF, 3 MID, 4 FWD
   cost: number;      // millions
-  ep: number;        // FPL's expected points for the coming gameweek
+  ep: number;        // the assistant's expected points for the coming gameweek
+  ep5?: number;      // ... summed over the next five gameweeks
   form: number;
   ppg: number;       // season points per game
   xgi: number;       // expected goals + assists per 90 minutes
