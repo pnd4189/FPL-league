@@ -64,7 +64,7 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 - `?action=monthly` — Monthly awards (10 rows)
 - `?action=live` — Provisional in-play scores + H2H (90s cache, polled by the website)
 - `?action=h2h_schedule` — Real league fixtures for all 38 GWs from the FPL api (pairings + played points), 5-min cache
-- `?action=advisor&id=ENTRY_ID` — Round assistant for one manager (captain top 3, H2H edge/threat vs the coming opponent, transfer ideas, squad health), 10-min cache; read-only, ranks on FPL `ep_next` + form + 5-GW fixture difficulty, squads = latest GW picks + saved transfers for the coming GW
+- `?action=advisor&id=ENTRY_ID` — Round assistant for one manager (captain top 3, H2H edge/threat vs the coming opponent, transfer ideas, squad health), 10-min cache; read-only, captains = MID/FWD starters ranked by season points/game, xGI/90, price, fixture and starts share (`ep_next`/form are one-week noise — a defender who just scored must not top the list); transfers/hunt rank on `ep_next` + form + 5-GW fixture difficulty, squads = latest GW picks + saved transfers for the coming GW
 - `?action=advisor_hunt&pos=1-4&max=PRICE` — Best available players of a position under a price cap
 - `?action=season` — Current/display GW, live flag, month→GW buckets
 - `?action=status` — Last refresh state and trigger status

@@ -9,8 +9,8 @@
  *
  * A pool is the compact snapshot built by Advisor.gs:
  *   { gw, players: {id: [name, team, pos, cost, ep, form, chance, status,
- *                        minutes, news, sel]}, fixtures: {teamId: [{gw, opp,
- *                        home, fdr}, ...]} }
+ *                        minutes, news, sel, ppg, starts, xgi90]}, played,
+ *                        fixtures: {club: [{gw, opp, home, fdr}, ...]} }
  * and a squad is [{el, slot}] with slots 1-11 starting and 12-15 on the bench.
  */
 
@@ -23,7 +23,8 @@ function advisorPlayer_(pool, id) {
   if (!r) return null;
   return {
     id: Number(id), name: r[0], team: r[1], pos: r[2], cost: r[3], ep: r[4], form: r[5],
-    chance: r[6], status: r[7], minutes: r[8], news: r[9], sel: r[10]
+    chance: r[6], status: r[7], minutes: r[8], news: r[9], sel: r[10],
+    ppg: r[11], starts: r[12], xgi: r[13]
   };
 }
 
@@ -60,7 +61,7 @@ function playerValue_(pool, p, gw) {
 function describePlayer_(pool, p, gw) {
   return {
     id: p.id, name: p.name, team: p.team, pos: p.pos, cost: p.cost / 10,
-    ep: p.ep, form: p.form, chance: p.chance, news: p.news, sel: p.sel,
+    ep: p.ep, form: p.form, ppg: p.ppg, xgi: p.xgi, chance: p.chance, news: p.news, sel: p.sel,
     fixtures: fixturesIn_(pool, p.team, gw)
   };
 }
@@ -76,17 +77,55 @@ function squadPlayers_(pool, squad) {
 }
 
 /**
- * Top captain options among the starters, best first. Doubts and goalkeepers
- * are left out: a keeper's expected points are high but nobody armbands one.
+ * How good an armband a player is. Expected points and form are one-week
+ * signals that let a defender who just scored top the list, so the score leans
+ * on what makes a real captain: steady season-long scoring (points per game),
+ * goal threat (xG + xA per 90), a premium price as the mark of a key player, an
+ * easy home fixture, and a place in the team every week.
+ */
+function captainScore_(pool, p, gw) {
+  const base = 0.35 * p.ppg + 0.25 * p.ep + 0.15 * p.form;
+  // Threat only counts once the sample is meaningful.
+  const threat = 2 * Math.min(p.xgi, 1.2) * Math.min(1, p.minutes / 270);
+  const premium = Math.min(3, Math.max(0, (p.cost / 10 - 6) / 2)) * 0.3;
+  let fixture = 0;
+  for (const f of fixturesIn_(pool, p.team, gw)) fixture += (3 - f.fdr) * 0.6 + (f.home ? 0.4 : 0);
+  const startShare = pool.played > 0 ? p.starts / pool.played : 1;
+  const rotation = startShare < 0.6 ? (0.6 - startShare) / 0.6 * 3 : 0;
+  return base + threat + premium + fixture - rotation;
+}
+
+/** Plain-language reasons a player makes the captain list. */
+function captainReasons_(pool, p, gw) {
+  const reasons = [];
+  if (p.cost / 10 >= 9) reasons.push("Cầu thủ giá cao (£" + (p.cost / 10).toFixed(1) + "m)");
+  if (p.ppg >= 5.5) reasons.push("Trung bình mùa " + p.ppg.toFixed(1) + " điểm/trận");
+  if (p.xgi >= 0.6) reasons.push("Nguy hiểm: " + p.xgi.toFixed(2) + " xG+xA/90 phút");
+  const first = fixturesIn_(pool, p.team, gw)[0];
+  if (first && first.fdr <= 2) reasons.push("Lịch dễ: " + first.opp + (first.home ? " (sân nhà)" : " (sân khách)"));
+  else if (first && first.home && first.fdr === 3) reasons.push("Đá sân nhà với " + first.opp);
+  if (p.form >= 6) reasons.push("Phong độ tốt (" + p.form.toFixed(1) + ")");
+  return reasons.slice(0, 4);
+}
+
+/**
+ * Top captain options among the starters, best first. Only midfielders and
+ * forwards are considered — defenders and goalkeepers have a low ceiling and
+ * nobody armbands them — and doubts or players without a match are left out.
  */
 function rankCaptains_(pool, squad, gw, limit) {
   return squadPlayers_(pool, squad)
     .filter(function (x) {
-      return x.slot <= 11 && x.p.pos !== 1 && !isDoubtful_(x.p) && fixturesIn_(pool, x.p.team, gw).length > 0;
+      return x.slot <= 11 && x.p.pos >= 3 && !isDoubtful_(x.p) && fixturesIn_(pool, x.p.team, gw).length > 0;
     })
-    .sort(function (a, b) { return b.p.ep - a.p.ep || b.p.form - a.p.form; })
+    .map(function (x) { return { p: x.p, score: captainScore_(pool, x.p, gw) }; })
+    .sort(function (a, b) { return b.score - a.score; })
     .slice(0, limit)
-    .map(function (x) { return describePlayer_(pool, x.p, gw); });
+    .map(function (x) {
+      const row = describePlayer_(pool, x.p, gw);
+      row.reasons = captainReasons_(pool, x.p, gw);
+      return row;
+    });
 }
 
 /** Squad members who may not play: injured, doubtful, or without a match. */

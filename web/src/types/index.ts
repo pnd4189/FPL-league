@@ -248,6 +248,9 @@ export interface AdvisorPlayer {
   cost: number;      // millions
   ep: number;        // FPL's expected points for the coming gameweek
   form: number;
+  ppg: number;       // season points per game
+  xgi: number;       // expected goals + assists per 90 minutes
+  reasons?: string[]; // why a captain pick made the list
   chance: number;    // chance of playing, percent
   news: string;
   sel: number;       // ownership, percent

@@ -56,6 +56,9 @@ const PlayerLine: React.FC<{ p: AdvisorPlayer; showCost?: boolean }> = ({ p, sho
         {p.name} <span className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>{p.team} · {POS_SHORT[p.pos]}</span>
       </p>
       <div className="mt-0.5"><FixtureChips fixtures={p.fixtures} /></div>
+      {p.reasons && p.reasons.length > 0 && (
+        <p className="text-[11px] mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>{p.reasons.join(' · ')}</p>
+      )}
     </div>
     <div className="text-right flex-shrink-0">
       <p className="text-sm font-mono font-black" style={{ color: 'var(--accent-primary)' }}>{p.ep.toFixed(1)} <span className="text-[9px] font-normal" style={{ color: 'var(--text-faint)' }}>điểm dự kiến</span></p>
@@ -169,7 +172,7 @@ export const AdvisorView: React.FC = () => {
           </p>
 
           <Card icon={<Crown className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />} title="Captain nên chọn"
-            hint="Xếp theo điểm dự kiến của FPL trong 11 người đá chính. Người nghi ngờ chấn thương hoặc không có trận bị loại.">
+            hint="Chỉ xét tiền vệ và tiền đạo đá chính. Xếp theo độ đều điểm cả mùa, khả năng ghi bàn/kiến tạo, giá cầu thủ (key player), phong độ và độ khó trận đấu. Người nghi ngờ chấn thương, hay ngồi dự bị luân phiên hoặc không có trận bị loại hoặc bị trừ điểm.">
             {advice.captains.length ? advice.captains.map((p, i) => (
               <div key={p.id} className="flex items-center gap-3">
                 <span className="text-lg font-black w-5 text-center" style={{ color: i === 0 ? 'var(--accent-gold)' : 'var(--text-faint)' }}>{i + 1}</span>

@@ -19,11 +19,12 @@ const ADVISOR_REPLY_TTL = 600;   // seconds — one manager's advice
  * club short name. Cached under the gameweek it was built for.
  *
  * @param {number} gw the gameweek being advised
+ * @param {number} played gameweeks already finished, to judge how regular a starter is
  * @return {Object|null} see AdvisorLogic.gs, or null when the FPL api is down
  */
-function getAdvisorPool_(gw) {
+function getAdvisorPool_(gw, played) {
   const cache = CacheService.getScriptCache();
-  const cacheKey = "advisor_pool|" + gw;
+  const cacheKey = "advisor_pool2|" + gw;
   const cached = cache.get(cacheKey);
   if (cached) {
     try {
@@ -51,7 +52,10 @@ function getAdvisorPool_(gw) {
       el.status,
       el.minutes || 0,
       el.news ? String(el.news).slice(0, 60) : "",
-      parseFloat(el.selected_by_percent) || 0
+      parseFloat(el.selected_by_percent) || 0,
+      parseFloat(el.points_per_game) || 0,
+      el.starts || 0,
+      parseFloat(el.expected_goal_involvements_per_90) || 0
     ];
   }
 
@@ -64,7 +68,7 @@ function getAdvisorPool_(gw) {
     (fixtures[away] = fixtures[away] || []).push({ gw: f.event, opp: home, home: false, fdr: f.team_a_difficulty });
   }
 
-  const pool = { gw: gw, players: players, fixtures: fixtures };
+  const pool = { gw: gw, played: played, players: players, fixtures: fixtures };
   try {
     cache.put(cacheKey, JSON.stringify(pool), ADVISOR_POOL_TTL);
   } catch (e) { /* too large for the cache — rebuilt on the next request */ }
@@ -125,7 +129,7 @@ function getAdvisorData(entryId) {
     } catch (e) { /* rebuild below */ }
   }
 
-  const pool = getAdvisorPool_(gw);
+  const pool = getAdvisorPool_(gw, state.finishedGws);
   if (!pool) return { status: "error", message: "Chưa tải được dữ liệu cầu thủ từ FPL." };
 
   const mine = getAdvisorSquad_(manager.id, state, pool);
@@ -189,7 +193,7 @@ function getAdvisorHunt(pos, maxCost) {
 
   const state = getSeasonState();
   if (!state || !state.nextGw) return { status: "error", message: "Chưa có vòng tiếp theo." };
-  const pool = getAdvisorPool_(state.nextGw);
+  const pool = getAdvisorPool_(state.nextGw, state.finishedGws);
   if (!pool) return { status: "error", message: "Chưa tải được dữ liệu cầu thủ từ FPL." };
 
   return {
