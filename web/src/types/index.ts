@@ -230,3 +230,54 @@ export interface LiveGwData {
   scores: LiveScore[];
   h2h: LiveH2HFixture[];
 }
+
+/** One fixture of a club, with FPL's 1 (easy) - 5 (hard) difficulty. */
+export interface AdvisorFixture {
+  gw: number;
+  opp: string;
+  home: boolean;
+  fdr: number;
+}
+
+/** A footballer as the round assistant describes them. */
+export interface AdvisorPlayer {
+  id: number;
+  name: string;
+  team: string;
+  pos: number;       // 1 GK, 2 DEF, 3 MID, 4 FWD
+  cost: number;      // millions
+  ep: number;        // FPL's expected points for the coming gameweek
+  form: number;
+  chance: number;    // chance of playing, percent
+  news: string;
+  sel: number;       // ownership, percent
+  fixtures: AdvisorFixture[];
+  difficulty?: number; // average difficulty of the next five gameweeks
+}
+
+export interface AdvisorTransferIdea {
+  out: AdvisorPlayer;
+  outDifficulty: number;
+  ins: AdvisorPlayer[];
+}
+
+export interface AdvisorData {
+  gw: number;
+  deadline: string | null;
+  manager: string;
+  basedOnGw: number;
+  savedTransfers: number;
+  bank: number;
+  captains: AdvisorPlayer[];
+  health: { name: string; team: string; starter: boolean; why: string; news: string }[];
+  opponent: {
+    id: number;
+    manager: string;
+    edge: AdvisorPlayer[];
+    threat: AdvisorPlayer[];
+    myProjected: number;
+    theirProjected: number;
+  } | null;
+  transfers: AdvisorTransferIdea[];
+  updatedAt: string;
+}

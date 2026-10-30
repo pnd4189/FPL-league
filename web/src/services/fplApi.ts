@@ -6,6 +6,8 @@ import {
   LeagueDashboardData,
   LiveGwData,
   H2HScheduleRow,
+  AdvisorData,
+  AdvisorPlayer,
 } from '../types';
 import {
   INITIAL_CLASSIC_STANDINGS,
@@ -351,5 +353,32 @@ export async function fetchH2HSchedule(): Promise<H2HScheduleRow[] | null> {
   } catch (err) {
     console.warn('H2H schedule unavailable:', err);
     return null;
+  }
+}
+
+// A cold advisor request fetches several FPL endpoints one after another, so it
+// gets a longer budget than plain reads and is never retried (a retry would
+// double the load on the backend for the same answer).
+const ADVISOR_TIMEOUT_MS = 45000;
+
+export async function fetchAdvisor(entryId: number): Promise<{ data: AdvisorData | null; message: string }> {
+  try {
+    const json = await fetchJson(`${endpoint('advisor')}&id=${entryId}`, ADVISOR_TIMEOUT_MS, 0);
+    if (json?.status === 'success' && json.data) return { data: json.data as AdvisorData, message: '' };
+    return { data: null, message: json?.message || 'Chưa lấy được gợi ý, thử lại sau.' };
+  } catch (err) {
+    console.warn('Advisor unavailable:', err);
+    return { data: null, message: 'Chưa kết nối được máy chủ, thử lại sau ít phút.' };
+  }
+}
+
+export async function fetchAdvisorHunt(pos: number, maxCost: number): Promise<{ players: AdvisorPlayer[] | null; message: string }> {
+  try {
+    const json = await fetchJson(`${endpoint('advisor_hunt')}&pos=${pos}&max=${maxCost}`, ADVISOR_TIMEOUT_MS, 0);
+    if (json?.status === 'success' && json.data) return { players: json.data.players as AdvisorPlayer[], message: '' };
+    return { players: null, message: json?.message || 'Chưa tìm được, thử lại sau.' };
+  } catch (err) {
+    console.warn('Advisor hunt unavailable:', err);
+    return { players: null, message: 'Chưa kết nối được máy chủ, thử lại sau ít phút.' };
   }
 }

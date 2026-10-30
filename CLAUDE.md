@@ -11,11 +11,13 @@ Google Apps Script (backend) + React/Vite/Tailwind (frontend) dashboard for the 
 ## Structure
 
 ```
-apps-script/        # 8 modular .gs files + manifest
+apps-script/        # 10 modular .gs files + manifest
   Config.gs          Season config, 14 managers, month→GW map, safe logging
   FPLApi.gs          FPL API fetch helpers + cached season state
   Live.gs            In-play (provisional) gameweek scoring
   AutoSubs.gs        FPL auto-sub + vice-captain rules (pure logic, replayable)
+  AdvisorLogic.gs    Round-assistant scoring rules (pure logic, replayable)
+  Advisor.gs         Round-assistant data: player/fixture pool, squads, endpoints
   DataProcessor.gs   Parse & write settled data to Google Sheet (26 tabs)
   Triggers.gs        Auto-refresh 6h + hourly settlement check
   Menu.gs            Custom Sheet menu
@@ -23,7 +25,7 @@ apps-script/        # 8 modular .gs files + manifest
   appsscript.json    Manifest
 
 web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
-  src/components/    14 TSX components
+  src/components/    15 TSX components
   src/data/          initialData.ts (14 HLV, clubs, prizes)
   src/services/      fplApi.ts (API client), liveStandings.ts (live merge)
   src/types/         TypeScript interfaces
@@ -32,7 +34,7 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 
 ## Development Rules
 
-- **Backend:** 8 separate .gs modules. Do NOT merge into one file.
+- **Backend:** 10 separate .gs modules. Do NOT merge into one file.
 - **Frontend:** React + TypeScript. No external UI libraries beyond lucide-react icons.
 - **Data sync:** settled data via 6h trigger + hourly settlement check + manual button. Page open does NOT run a full refresh — it polls `?action=live` instead.
 - **Live scoring:** standings must move during a gameweek. Live points come from `event/{gw}/live/` + cached squad picks; the website merges them onto the settled tables (`web/src/services/liveStandings.ts`). Never write live data to the Sheet.
@@ -62,6 +64,8 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 - `?action=monthly` — Monthly awards (10 rows)
 - `?action=live` — Provisional in-play scores + H2H (90s cache, polled by the website)
 - `?action=h2h_schedule` — Real league fixtures for all 38 GWs from the FPL api (pairings + played points), 5-min cache
+- `?action=advisor&id=ENTRY_ID` — Round assistant for one manager (captain top 3, H2H edge/threat vs the coming opponent, transfer ideas, squad health), 10-min cache; read-only, ranks on FPL `ep_next` + form + 5-GW fixture difficulty, squads = latest GW picks + saved transfers for the coming GW
+- `?action=advisor_hunt&pos=1-4&max=PRICE` — Best available players of a position under a price cap
 - `?action=season` — Current/display GW, live flag, month→GW buckets
 - `?action=status` — Last refresh state and trigger status
 - `?action=refresh&key=htcv-fpl-2027` — Force full refresh (3-min cooldown, script-locked)
@@ -86,6 +90,7 @@ Read responses are cached 5 min under a generation token; `refreshFPLAll()` bump
 - H2H fixtures everywhere come from the real league draw (`?action=h2h_schedule`) — never a locally generated schedule; unplayed GWs show "-" points
 - Manager modal links to the official squad: `fantasy.premierleague.com/en/entry/{id}/event/{gw}`
 - Hall of Fame tab: past champions with their FPL season total (`web/src/components/HallOfFame.tsx`, totals recorded from `entry/{id}/history/`)
+- "Trợ Lý Vòng Đấu" tab (`web/src/components/AdvisorView.tsx`): no AI, no API cost — pure rules over FPL data. Chat/AI comments (Dahl key in Script Properties) are planned on top of it
 - Early auto-substitutions at the GW's final whistle (see Development Rules); squad popup marks subs ▲ in / ▼ out
 
 ### 🔲 Remaining

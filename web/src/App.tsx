@@ -10,6 +10,7 @@ import { WeeklyWinners } from './components/WeeklyWinners';
 import { MonthlyAwards } from './components/MonthlyAwards';
 import { FantasyCup } from './components/FantasyCup';
 import { HallOfFame } from './components/HallOfFame';
+import { AdvisorView } from './components/AdvisorView';
 import { PrizePool } from './components/PrizePool';
 import { ManagerModal } from './components/ManagerModal';
 
@@ -364,6 +365,10 @@ export const App: React.FC = () => {
             h2hStandings={liveH2HStandings}
             onSelectPlayer={(id) => setSelectedPlayerId(id)}
           />
+        )}
+
+        {activeTab === 'advisor' && (
+          <AdvisorView />
         )}
 
         {activeTab === 'fame' && (

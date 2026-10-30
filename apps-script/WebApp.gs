@@ -136,6 +136,12 @@ function doGet(e) {
       case "live":
         result = getLiveData();
         break;
+      case "advisor":
+        result = getAdvisorData(params.id);
+        break;
+      case "advisor_hunt":
+        result = getAdvisorHunt(params.pos, params.max);
+        break;
       case "season":
         result = getSeasonData();
         break;
