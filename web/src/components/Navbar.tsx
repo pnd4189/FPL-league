@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, RefreshCw, Zap, Moon, Sun, Flame, Sparkles, Swords, Calendar, Award, DollarSign, Activity } from 'lucide-react';
+import { Trophy, RefreshCw, Zap, Moon, Sun, Flame, Sparkles, Swords, Calendar, Award, DollarSign, Activity, Crown } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export type ThemeMode = 'fpl' | 'dark' | 'light' | 'volt';
@@ -51,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'monthly', label: 'Nhất Tháng', shortLabel: 'Tháng', icon: Calendar },
     { id: 'cup', label: 'Fantasy Cup', shortLabel: 'Cup', icon: Award },
     { id: 'pool', label: 'Giải Thưởng', shortLabel: 'Thưởng', icon: DollarSign },
+    { id: 'fame', label: 'Hall of Fame', shortLabel: 'HoF', icon: Crown },
   ];
 
   const themes: { id: ThemeMode; name: string; icon: any; previewColor: string; label: string }[] = [
@@ -202,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           borderColor: 'var(--border-subtle)'
         }}
       >
-        <div className="grid grid-cols-7 items-center h-14 px-1">
+        <div className="grid grid-cols-8 items-center h-14 px-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

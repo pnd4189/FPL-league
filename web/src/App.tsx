@@ -9,6 +9,7 @@ import { H2HArena } from './components/H2HArena';
 import { WeeklyWinners } from './components/WeeklyWinners';
 import { MonthlyAwards } from './components/MonthlyAwards';
 import { FantasyCup } from './components/FantasyCup';
+import { HallOfFame } from './components/HallOfFame';
 import { PrizePool } from './components/PrizePool';
 import { ManagerModal } from './components/ManagerModal';
 
@@ -363,6 +364,10 @@ export const App: React.FC = () => {
             h2hStandings={liveH2HStandings}
             onSelectPlayer={(id) => setSelectedPlayerId(id)}
           />
+        )}
+
+        {activeTab === 'fame' && (
+          <HallOfFame />
         )}
 
       </main>
