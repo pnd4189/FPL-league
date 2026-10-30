@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRightLeft, Crown, HeartPulse, Lightbulb, Loader2, Search, Swords } from 'lucide-react';
+import { ArrowRightLeft, Bot, Crown, HeartPulse, Lightbulb, Loader2, Search, Swords } from 'lucide-react';
 import { INITIAL_PLAYERS } from '../data/initialData';
 import { fetchAdvisor, fetchAdvisorHunt } from '../services/fplApi';
 import { AdvisorData, AdvisorFixture, AdvisorPlayer } from '../types';
+import { AdvisorChat } from './AdvisorChat';
 
 const STORAGE_KEY = 'htcv_fpl_advisor_manager';
 const POSITIONS = [
@@ -171,6 +172,13 @@ export const AdvisorView: React.FC = () => {
             Gợi ý chỉ mang tính tham khảo.
           </p>
 
+          {advice.aiReview && (
+            <Card icon={<Bot className="w-4 h-4" style={{ color: 'var(--accent-secondary)' }} />} title="Nhận xét của trợ lý AI"
+              hint={`Viết lúc ${new Date(advice.aiReview.at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} từ các số liệu bên dưới. AI có thể nhầm, tin nhắn chấn thương mới có thể chưa được cập nhật.`}>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-main)' }}>{advice.aiReview.text}</p>
+            </Card>
+          )}
+
           <Card icon={<Crown className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />} title="Captain nên chọn"
             hint="Chỉ xét tiền vệ và tiền đạo đá chính, xếp theo điểm dự kiến của trợ lý. Người nghi ngờ chấn thương hoặc không có trận bị loại.">
             {advice.captains.length ? advice.captains.map((p, i) => (
@@ -229,6 +237,8 @@ export const AdvisorView: React.FC = () => {
           </Card>
         </>
       )}
+
+      <AdvisorChat managerId={managerId} managerName={INITIAL_PLAYERS.find(p => p.id === managerId)?.manager || ''} />
 
       <Card icon={<Search className="w-4 h-4" style={{ color: 'var(--accent-secondary)' }} />} title="Tìm nhanh cầu thủ"
         hint="Chọn vị trí và ngân sách tối đa, trợ lý tìm người đáng mua nhất theo điểm dự kiến và lịch thi đấu.">

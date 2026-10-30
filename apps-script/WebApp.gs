@@ -137,7 +137,10 @@ function doGet(e) {
         result = getLiveData();
         break;
       case "advisor":
-        result = getAdvisorData(params.id);
+        result = getAdvisorWithReview_(params.id);
+        break;
+      case "chat":
+        result = handleAiChat_(params);
         break;
       case "advisor_hunt":
         result = getAdvisorHunt(params.pos, params.max);

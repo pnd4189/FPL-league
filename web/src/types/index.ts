@@ -283,5 +283,16 @@ export interface AdvisorData {
     theirProjected: number;
   } | null;
   transfers: AdvisorTransferIdea[];
+  /** AI-written comment for the coming gameweek, once the backend has produced it. */
+  aiReview?: { text: string; at: string } | null;
   updatedAt: string;
+}
+
+export interface ChatReply {
+  ok: boolean;
+  answer: string;
+  message: string;
+  code: string;      // backend error code, empty on success
+  remaining: number | null;
+  limit: number | null;
 }

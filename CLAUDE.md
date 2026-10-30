@@ -11,13 +11,15 @@ Google Apps Script (backend) + React/Vite/Tailwind (frontend) dashboard for the 
 ## Structure
 
 ```
-apps-script/        # 10 modular .gs files + manifest
+apps-script/        # 12 modular .gs files + manifest
   Config.gs          Season config, 14 managers, month→GW map, safe logging
   FPLApi.gs          FPL API fetch helpers + cached season state
   Live.gs            In-play (provisional) gameweek scoring
   AutoSubs.gs        FPL auto-sub + vice-captain rules (pure logic, replayable)
   AdvisorLogic.gs    Round-assistant scoring rules (pure logic, replayable)
   Advisor.gs         Round-assistant data: player/fixture pool, squads, endpoints
+  Ai.gs              Dahl Inference client (OpenAI-compatible), model fallback, <think> stripping
+  AiAdvisor.gs       AI comment per manager per GW (hourly trigger) + league chat with limits
   DataProcessor.gs   Parse & write settled data to Google Sheet (26 tabs)
   Triggers.gs        Auto-refresh 6h + hourly settlement check
   Menu.gs            Custom Sheet menu
@@ -34,7 +36,7 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 
 ## Development Rules
 
-- **Backend:** 10 separate .gs modules. Do NOT merge into one file.
+- **Backend:** 12 separate .gs modules. Do NOT merge into one file.
 - **Frontend:** React + TypeScript. No external UI libraries beyond lucide-react icons.
 - **Data sync:** settled data via 6h trigger + hourly settlement check + manual button. Page open does NOT run a full refresh — it polls `?action=live` instead.
 - **Live scoring:** standings must move during a gameweek. Live points come from `event/{gw}/live/` + cached squad picks; the website merges them onto the settled tables (`web/src/services/liveStandings.ts`). Never write live data to the Sheet.
@@ -65,6 +67,8 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 - `?action=live` — Provisional in-play scores + H2H (90s cache, polled by the website)
 - `?action=h2h_schedule` — Real league fixtures for all 38 GWs from the FPL api (pairings + played points), 5-min cache
 - `?action=advisor&id=ENTRY_ID` — Round assistant for one manager (captain top 3, H2H edge/threat vs the coming opponent, transfer ideas, squad health), 10-min cache; read-only. Expected points are OUR model, never FPL's `ep_next` (this season `ep_next` == `form` == last-3-GW points / 3 for 89% of players and ignores the opponent): per-position least squares on ppg, form, xGI/90, minutes share, FDR, venue, price (`ADVISOR_XP_COEF` in AdvisorLogic.gs; refit with `tools/advisor-model/`). Captains = MID/FWD starters by next-GW xP; transfers/hunt rank by 5-GW xP; squads = latest GW picks + saved transfers for the coming GW
+- `?action=chat&id=ENTRY_ID&code=LEAGUE_CODE&q=QUESTION` — League chat (GET only: Apps Script answers no CORS preflight). Needs Script Properties `DAHL_API_KEY` + `LEAGUE_CHAT_CODE` (user-set, never in code or chat). 10 questions/manager/day (Vietnam time, refunded when the AI fails), 300-char questions, 30 wrong codes/hour locks the chat. Prompt = compact advisor text only (names + xP): a 3,000-token prompt took 30-43s on MiniMax, 500 tokens ~6s, and a single Apps Script fetch dies at 60s. The advisor text pre-computes the H2H verdict because MiniMax once read 40.8 vs 42.7 backwards
+- `?action=advisor` also returns `aiReview` once the hourly trigger has written it (36h before the deadline, a few managers per run, kept in Script Properties `ai_review|GW|ID`)
 - `?action=advisor_hunt&pos=1-4&max=PRICE` — Best available players of a position under a price cap
 - `?action=season` — Current/display GW, live flag, month→GW buckets
 - `?action=status` — Last refresh state and trigger status
@@ -90,7 +94,7 @@ Read responses are cached 5 min under a generation token; `refreshFPLAll()` bump
 - H2H fixtures everywhere come from the real league draw (`?action=h2h_schedule`) — never a locally generated schedule; unplayed GWs show "-" points
 - Manager modal links to the official squad: `fantasy.premierleague.com/en/entry/{id}/event/{gw}`
 - Hall of Fame tab: past champions with their FPL season total (`web/src/components/HallOfFame.tsx`, totals recorded from `entry/{id}/history/`)
-- "Trợ Lý Vòng Đấu" tab (`web/src/components/AdvisorView.tsx`): no AI, no API cost — pure rules over FPL data. Chat/AI comments (Dahl key in Script Properties) are planned on top of it
+- "Trợ Lý Vòng Đấu" tab (`web/src/components/AdvisorView.tsx`): no AI, no API cost — pure rules over FPL data. AI comment + chat sit on top of it and are optional: Dahl free tier (100M tokens once) can run out (HTTP 402) or hit `model_concurrency` 429 — only MiniMax-M2.7 is verified to answer, GLM/DeepSeek are tried as fallbacks
 - Early auto-substitutions at the GW's final whistle (see Development Rules); squad popup marks subs ▲ in / ▼ out
 
 ### 🔲 Remaining

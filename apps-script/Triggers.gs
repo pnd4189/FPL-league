@@ -172,4 +172,11 @@ function hourlySettlementCheck() {
       logStatus("Pick warmup failed: " + err.message);
     }
   }
+
+  // The AI comment is a bonus: a failure here must never break the check above.
+  try {
+    generateAiReviews_(state);
+  } catch (err) {
+    logStatus("AI reviews failed: " + err.message);
+  }
 }
