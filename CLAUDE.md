@@ -11,10 +11,11 @@ Google Apps Script (backend) + React/Vite/Tailwind (frontend) dashboard for the 
 ## Structure
 
 ```
-apps-script/        # 7 modular .gs files + manifest
+apps-script/        # 8 modular .gs files + manifest
   Config.gs          Season config, 14 managers, month→GW map, safe logging
   FPLApi.gs          FPL API fetch helpers + cached season state
   Live.gs            In-play (provisional) gameweek scoring
+  AutoSubs.gs        FPL auto-sub + vice-captain rules (pure logic, replayable)
   DataProcessor.gs   Parse & write settled data to Google Sheet (26 tabs)
   Triggers.gs        Auto-refresh 6h + hourly settlement check
   Menu.gs            Custom Sheet menu
@@ -22,7 +23,7 @@ apps-script/        # 7 modular .gs files + manifest
   appsscript.json    Manifest
 
 web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
-  src/components/    13 TSX components
+  src/components/    14 TSX components
   src/data/          initialData.ts (14 HLV, clubs, prizes)
   src/services/      fplApi.ts (API client), liveStandings.ts (live merge)
   src/types/         TypeScript interfaces
@@ -31,11 +32,11 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 
 ## Development Rules
 
-- **Backend:** 7 separate .gs modules. Do NOT merge into one file.
+- **Backend:** 8 separate .gs modules. Do NOT merge into one file.
 - **Frontend:** React + TypeScript. No external UI libraries beyond lucide-react icons.
 - **Data sync:** settled data via 6h trigger + hourly settlement check + manual button. Page open does NOT run a full refresh — it polls `?action=live` instead.
 - **Live scoring:** standings must move during a gameweek. Live points come from `event/{gw}/live/` + cached squad picks; the website merges them onto the settled tables (`web/src/services/liveStandings.ts`). Never write live data to the Sheet.
-- **Auto-substitutions:** once every match of the GW has finished, FPL rewrites `entry/{id}/event/{gw}/picks/` into the effective (subs applied) lineup. The backend detects "matches complete" and refetches picks once (throttled) so live scores equal the official ones. GW1-verified: DaddyCool 54 (not 52), 5 managers affected.
+- **Auto-substitutions:** FPL only rewrites `entry/{id}/event/{gw}/picks/` into the effective (subs applied, captain→vice) lineup 1-2h after the GW's last match. The moment every fixture is `finished_provisional`, `applyAutoSubs_()` (AutoSubs.gs) applies the same rules locally — bench order 1-2-3, ≥3 DEF and ≥1 FWD, GK only for GK, a card from the bench counts as played, captain→vice, no subs under Bench Boost — and `?action=live` flags `autoSubsProvisional`. Picks keep being refetched (5-min throttle) until FPL publishes (`subsDone`: any sub in the league, or the event is finished); from then on FPL's lineup is used as-is. Player points come straight from `event/{gw}/live/` — bonus is already included in-match this season, never estimate it from BPS. Replayed against GW1-8: 112/112 manager-GWs match FPL's points and sub order.
 - **H2H GA:** the standings api never returns `points_against` — derive GA from the stored match rows. The display GW's matches are always refetched (points go provisional→final); older settled GWs reuse stored rows. Every "⚔️ H2H BXH" column (P/W/D/L/GF/GA/GD/Pts) must come from the SAME settled-GW row set (`finished && dataChecked`) — summing provisional display-GW rows while GF/Pts count finished GWs only produced garbage GD (fixed 2026-08-31).
 - **H2H Classic Total:** column K mirrors the Classic tab's TOTAL — the manager's net-points sum over every FantasyData row (live GW included), same as `updateClassicStandings()`. It is NOT the H2H match-point sum: that only covers settled GWs, so the two tabs would drift apart as the season runs (fixed 2026-08-31).
 - **H2H ranking — two distinct rules:** overall H2H League table ranks by official FPL rule (H2H Pts → Classic Total). Monthly H2H (Nhất tháng) ranks by H2H Pts → GD → GF → month classic total. Never copy one rule onto the other tab.
@@ -84,6 +85,8 @@ Read responses are cached 5 min under a generation token; `refreshFPLAll()` bump
 - Classic tab renamed "Classic League", with a live current-GW column right before TOTAL
 - H2H fixtures everywhere come from the real league draw (`?action=h2h_schedule`) — never a locally generated schedule; unplayed GWs show "-" points
 - Manager modal links to the official squad: `fantasy.premierleague.com/en/entry/{id}/event/{gw}`
+- Hall of Fame tab: past champions with their FPL season total (`web/src/components/HallOfFame.tsx`, totals recorded from `entry/{id}/history/`)
+- Early auto-substitutions at the GW's final whistle (see Development Rules); squad popup marks subs ▲ in / ▼ out
 
 ### 🔲 Remaining
 - End-of-season: Cup bracket activation after GW35

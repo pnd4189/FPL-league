@@ -135,6 +135,13 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
                   style={{ color: p.slot <= 11 ? '#e8e8ee' : '#9a9aa5' }}>
                   {p.name}
                 </span>
+                {p.sub && (
+                  <span className="text-[9px] font-black"
+                    title={p.sub === 'in' ? 'Vào thay (dự bị tự động)' : 'Bị thay ra (không ra sân)'}
+                    style={{ color: p.sub === 'in' ? '#00ff87' : '#ff6b6b' }}>
+                    {p.sub === 'in' ? '▲' : '▼'}
+                  </span>
+                )}
                 {isCap && (
                   <span className="text-[8px] font-black px-1 rounded"
                     style={{ backgroundColor: '#ff2d55', color: '#fff' }}>

@@ -16,9 +16,11 @@
  *
  * @param {number} gw
  * @param {boolean} [forceRefresh]
- * @return {Object|null} { entryId: { p: [[elementId, multiplier], ...], c: transferCost } }
+ * @param {boolean} [eventFinished] FPL has finalised the gameweek, so these
+ *   picks are the effective lineups even when nobody needed a substitution
+ * @return {Object|null} { entryId: { p: [[elementId, multiplier, slot, isVice, isCaptain, elementType], ...], c: transferCost } }
  */
-function getGameweekPicks_(gw, forceRefresh) {
+function getGameweekPicks_(gw, forceRefresh, eventFinished) {
   const propKey = "picks_gw" + gw;
   const cache = CacheService.getScriptCache();
 
@@ -33,9 +35,9 @@ function getGameweekPicks_(gw, forceRefresh) {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // v3 rows carry the auto-substituted lineup FPL publishes once the
-        // gameweek's matches finish; older stores must be refetched.
-        if (parsed && parsed.v === 3) return parsed;
+        // v4 rows carry the captain flag and element type the local
+        // auto-substitution needs; older stores must be refetched.
+        if (parsed && parsed.v === 4) return parsed;
       } catch (e) { /* corrupt value — refetch below */ }
     }
     // Squads are published a few minutes after the deadline. Without this
@@ -44,7 +46,7 @@ function getGameweekPicks_(gw, forceRefresh) {
   }
 
   const players = getActivePlayers();
-  const picks = { v: 3 };
+  const picks = { v: 4 };
   let complete = true;
 
   for (const player of players) {
@@ -56,14 +58,17 @@ function getGameweekPicks_(gw, forceRefresh) {
     }
     picks[player.id] = {
       p: data.picks.map(function (pick) {
-        return [pick.element, pick.multiplier, pick.position, pick.is_vice_captain ? 1 : 0];
+        return [pick.element, pick.multiplier, pick.position, pick.is_vice_captain ? 1 : 0,
+          pick.is_captain ? 1 : 0, pick.element_type];
       }),
       c: (data.entry_history && data.entry_history.event_transfers_cost) || 0,
       chip: data.active_chip || "",
-      // Once every match of the gameweek has finished, FPL rewrites the picks
+      // 1-2 hours after the gameweek's last match, FPL rewrites the picks
       // into the effective (auto-substitutions applied) lineup and reports
       // them here. The official score is entry_history.points.
-      subs: data.automatic_subs || [],
+      subs: (data.automatic_subs || []).map(function (sub) {
+        return { in: sub.element_in, out: sub.element_out };
+      }),
       hp: data.entry_history && data.entry_history.points !== undefined
         ? data.entry_history.points
         : null
@@ -75,9 +80,10 @@ function getGameweekPicks_(gw, forceRefresh) {
     return null;
   }
 
-  // Any substitution in the league means FPL has published the effective
-  // lineups — they never change again, so this store is final.
-  picks.subsDone = false;
+  // A finalised gameweek, or any substitution in the league, means FPL has
+  // published the effective lineups — they never change again, so this store
+  // is final.
+  picks.subsDone = !!eventFinished;
   for (const key of Object.keys(picks)) {
     if (key === "v" || key === "subsDone") continue;
     if (picks[key].subs && picks[key].subs.length) { picks.subsDone = true; break; }
@@ -99,12 +105,15 @@ function getGameweekPicks_(gw, forceRefresh) {
 }
 
 /**
- * Once every match of the gameweek has finished — but before FPL finalises
- * the gameweek — the picks endpoint starts serving the auto-substituted
- * lineups. Refresh the picks once (throttled) so the live scores match the
- * official ones instead of replaying the pre-deadline lineup forever.
+ * 1-2 hours after the gameweek's last match, the picks endpoint starts serving
+ * FPL's auto-substituted lineups. Until then the live scores substitute
+ * locally; poll the picks (throttled) so FPL's own lineups take over as soon as
+ * they are published.
+ *
+ * @param {number} gw
+ * @param {boolean} eventFinished FPL has finalised the gameweek
  */
-function refreshSubsIfComplete_(gw) {
+function refreshSubsIfComplete_(gw, eventFinished) {
   const cache = CacheService.getScriptCache();
   if (cache.get("subs_try_gw" + gw)) return;
 
@@ -112,12 +121,12 @@ function refreshSubsIfComplete_(gw) {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      if (parsed && parsed.v === 3 && parsed.subsDone) return;
+      if (parsed && parsed.v === 4 && parsed.subsDone) return;
     } catch (e) { /* refetch below */ }
   }
 
   cache.put("subs_try_gw" + gw, "1", 300);
-  getGameweekPicks_(gw, true);
+  getGameweekPicks_(gw, true, eventFinished);
 }
 
 /**
@@ -148,30 +157,44 @@ function getGameweekH2HFixtures_(gw) {
 /**
  * Compute provisional points for every manager in a gameweek.
  *
- * Auto-substitutions are only applied by FPL once the gameweek finishes, so
- * in-play totals here match what the official FPL app shows live.
+ * While matches are in play the totals match what the official FPL app shows
+ * live. Once every match has finished, auto-substitutions and the vice-captain
+ * switch are applied here straight away instead of waiting the 1-2 hours FPL
+ * takes to publish them; FPL's own lineups replace them once available.
  *
  * Alongside the totals, each row carries the captain pick and the full squad
  * with per-player points so the website can show them on hover.
  *
- * @return {Array} one row per manager
+ * @param {number} gw
+ * @param {boolean} matchesComplete every match of the gameweek has finished
+ * @return {{scores: Array, provisionalSubs: boolean}} one score row per
+ *   manager, and whether the substitutions are local rather than FPL's
  */
-function computeLiveGameweek_(gw) {
+function computeLiveGameweek_(gw, matchesComplete) {
+  const none = { scores: [], provisionalSubs: false };
   const picks = getGameweekPicks_(gw);
-  if (!picks) return [];
+  if (!picks) return none;
 
   const live = fetchEventLive(gw);
-  if (!live || !live.elements || !live.elements.length) return [];
+  if (!live || !live.elements || !live.elements.length) return none;
 
-  // element id → { points, minutes }
+  // element id → { points, minutes, played }
   const elementStats = {};
   for (const element of live.elements) {
     const stats = element.stats || {};
     elementStats[element.id] = {
       points: stats.total_points || 0,
-      minutes: stats.minutes || 0
+      minutes: stats.minutes || 0,
+      // A card picked up without coming on still counts as playing.
+      played: stats.minutes > 0 || stats.yellow_cards > 0 || stats.red_cards > 0
     };
   }
+  const played = function (elementId) {
+    return !!(elementStats[elementId] && elementStats[elementId].played);
+  };
+
+  // Every match is over but FPL has not published its substituted lineups yet.
+  const provisionalSubs = !!matchesComplete && !picks.subsDone;
 
   const meta = getElementMeta_();
 
@@ -186,14 +209,37 @@ function computeLiveGameweek_(gw) {
     let captain = null;
     const squad = [];
 
-    // Picks arrive sorted by slot; keep that order for the squad view.
-    const ordered = entry.p.slice().sort(function (a, b) { return a[2] - b[2]; });
+    let lineup = entry.p.map(function (pick) {
+      return {
+        el: pick[0],
+        mult: pick[1],
+        slot: pick[2],
+        vice: pick[3] === 1,
+        cap: pick[4] === 1,
+        pos: pick[5] || (meta[pick[0]] && meta[pick[0]].pos) || 0
+      };
+    });
+    let subs = entry.subs || [];
+    if (provisionalSubs) {
+      const effective = applyAutoSubs_(lineup, played, entry.chip);
+      lineup = effective.picks;
+      subs = effective.subs;
+    }
+    const subbedIn = {};
+    const subbedOut = {};
+    for (const sub of subs) {
+      subbedIn[sub.in] = true;
+      subbedOut[sub.out] = true;
+    }
 
-    for (const pick of ordered) {
-      const elementId = pick[0];
-      const multiplier = pick[1];
-      const slot = pick[2];
-      const isVice = pick[3] === 1;
+    // Keep slot order for the squad view.
+    lineup.sort(function (a, b) { return a.slot - b.slot; });
+
+    for (const pick of lineup) {
+      const elementId = pick.el;
+      const multiplier = pick.mult;
+      const slot = pick.slot;
+      const isVice = pick.vice;
       const stats = elementStats[elementId] || { points: 0, minutes: 0 };
       const info = meta[elementId] || { name: "#" + elementId, team: "", pos: 0 };
 
@@ -206,7 +252,7 @@ function computeLiveGameweek_(gw) {
         captain = { id: elementId, name: info.name, team: info.team, pts: stats.points, mult: multiplier };
       }
 
-      squad.push({
+      const row = {
         id: elementId,
         name: info.name,
         team: info.team,
@@ -216,7 +262,10 @@ function computeLiveGameweek_(gw) {
         pts: stats.points,
         mins: stats.minutes,
         vice: isVice
-      });
+      };
+      if (subbedIn[elementId]) row.sub = "in";
+      else if (subbedOut[elementId]) row.sub = "out";
+      squad.push(row);
     }
 
     results.push({
@@ -229,13 +278,13 @@ function computeLiveGameweek_(gw) {
       playersPlayed: playersPlayed,
       playersRemaining: playersRemaining,
       chip: entry.chip || "",
-      subs: (entry.subs && entry.subs.length) || 0,
+      subs: subs.length,
       captain: captain,
       squad: squad
     });
   }
 
-  return results;
+  return { scores: results, provisionalSubs: provisionalSubs };
 }
 
 /**
@@ -361,6 +410,7 @@ function getLiveData(forceRefresh) {
       finishedGws: state.finishedGws,
       inPlay: false,
       autoSubsApplied: false,
+      autoSubsProvisional: false,
       settlementPending: settlementPending,
       updatedAt: new Date().toISOString(),
       scores: [],
@@ -376,10 +426,11 @@ function getLiveData(forceRefresh) {
 
   const play = getGameweekPlayState_(gw);
   const inPlay = play.started && !play.complete;
-  // Matches finished: pull the official auto-substituted lineups once so the
-  // provisional scores equal what the FPL site shows.
-  if (state.isLive && play.complete) refreshSubsIfComplete_(gw);
-  const scores = computeLiveGameweek_(gw);
+  // Matches finished: keep pulling picks until FPL publishes its substituted
+  // lineups; meanwhile the scores substitute locally.
+  if (play.complete) refreshSubsIfComplete_(gw, !state.isLive);
+  const computed = computeLiveGameweek_(gw, play.complete);
+  const scores = computed.scores;
   const payload = {
     status: "success",
     data: {
@@ -388,9 +439,10 @@ function getLiveData(forceRefresh) {
       isPreSeason: false,
       finishedGws: state.finishedGws,
       inPlay: inPlay,
-      // Auto-subs apply once every match has finished (or the gameweek is
-      // finalised); the flag tells the site which score it is looking at.
-      autoSubsApplied: !state.isLive || scores.some(function (row) { return row.subs > 0; }),
+      // Auto-subs apply once every match has finished — locally at first
+      // (provisional), then FPL's own; the flags tell the site which it is.
+      autoSubsApplied: !state.isLive || play.complete,
+      autoSubsProvisional: computed.provisionalSubs,
       settlementPending: settlementPending,
       updatedAt: new Date().toISOString(),
       scores: scores,

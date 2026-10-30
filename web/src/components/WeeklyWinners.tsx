@@ -158,7 +158,9 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {isLive && selectedGW === activeGWNumber
                   ? (live?.autoSubsApplied
-                      ? 'Điểm chính thức theo FPL — đã áp dụng dự bị tự động'
+                      ? (live.autoSubsProvisional
+                          ? 'Đã hết trận — đã tạm áp dụng dự bị tự động & đội phó, chờ FPL chốt chính thức'
+                          : 'Điểm chính thức theo FPL — đã áp dụng dự bị tự động')
                       : 'Điểm tạm tính theo thời gian thực, tự cập nhật khi cầu thủ ghi điểm (chưa áp dụng dự bị tự động)')
                   : `Thứ tự xếp hạng 14 HLV theo điểm số vòng đấu ${selectedGW}`}
               </p>

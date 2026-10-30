@@ -167,6 +167,8 @@ export interface SquadPlayer {
   pts: number;
   mins: number;
   vice: boolean;
+  /** Came on ("in") or was taken off ("out") by an automatic substitution. */
+  sub?: 'in' | 'out';
 }
 
 /** The captain pick of a manager's live squad. */
@@ -189,7 +191,7 @@ export interface LiveScore {
   playersPlayed: number;
   playersRemaining: number;
   chip: string;
-  /** Automatic substitutions applied by FPL for this manager. */
+  /** Automatic substitutions applied for this manager (by FPL, or provisionally). */
   subs?: number;
   captain?: LiveCaptain | null;
   squad?: SquadPlayer[];
@@ -210,7 +212,8 @@ export interface LiveH2HFixture {
 
 /**
  * Live payload from the Apps Script backend. `autoSubsApplied` is false while
- * a gameweek runs because FPL only applies substitutions at finalisation.
+ * matches are still in play; once every match has finished the backend
+ * substitutes locally (`autoSubsProvisional`) until FPL publishes its own.
  */
 export interface LiveGwData {
   gw: number;
@@ -219,6 +222,8 @@ export interface LiveGwData {
   finishedGws: number;
   inPlay: boolean;
   autoSubsApplied: boolean;
+  /** Substitutions computed by the backend while FPL has not published its own. */
+  autoSubsProvisional?: boolean;
   /** A gameweek finished but the settled tables have not been rebuilt yet. */
   settlementPending?: boolean;
   updatedAt: string;
