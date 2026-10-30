@@ -188,37 +188,50 @@ function h2hFacts_(d) {
  * Free transfers, the suggested swaps and what to do with them, for one manager.
  * Pure data work: nothing here reaches the AI until transferFacts_ writes it.
  *
- * @return {{ft: Object, chipSuspected: boolean, wildcardOpen: boolean, plan: Object|null}|null} null without history
+ * @return {{ft: Object, overhaul: boolean, wildcardOpen: boolean, plan: Object|null}|null} null without history
  */
 function buildTransferPlan_(d, pool, season, history) {
   if (!pool || !history) return null;
   const ft = estimateFreeTransfers_(history.current, history.chips, d.savedTransfers);
-  // More saved transfers than the free ones could plausibly cover: a Wildcard or
-  // Free Hit is probably active for the coming gameweek, which the API hides
-  // until the deadline. Never print a large hit as fact.
-  const chipSuspected = d.savedTransfers > ft.free + CHIP_SUSPECT_EXTRA;
+  // Far more saved transfers than free ones: the squad is being rebuilt, so
+  // more swaps would only be noise. This says nothing about chips: the one
+  // played for the coming gameweek is not in the API until its deadline passes.
+  const overhaul = d.savedTransfers > ft.free + OVERHAUL_EXTRA;
   const wildcardOpen = !!(season && openChip_(season, history.chips, "wildcard", d.gw));
   let plan = null;
-  if (!chipSuspected) {
+  if (!overhaul) {
     const bank = Math.round(d.bank * 10);
     const squad = squadPlayers_(pool, d.squad).map(function (x) {
       return { id: x.p.id, team: x.p.team, pos: x.p.pos, starter: x.slot <= 11, ep5: round1_(horizonPoints_(pool, x.p, d.gw)) };
     });
     plan = planTransfers_(suggestTransfers_(pool, d.squad, d.gw, bank, PLAN_MAX_MOVES), squad, ft.available, bank);
   }
-  return { ft: ft, chipSuspected: chipSuspected, wildcardOpen: wildcardOpen, plan: plan };
+  return { ft: ft, overhaul: overhaul, wildcardOpen: wildcardOpen, plan: plan };
+}
+
+/**
+ * What the saved transfers cost, stated as what the data shows: FPL does not
+ * publish the chip of the coming gameweek before its deadline, so whether a
+ * Wildcard or Free Hit is already active is unknown, and the cost is conditional.
+ */
+function savedMovesText_(d, ft) {
+  return "Trong app FPL bạn đã thực hiện sẵn " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + " (chưa chốt đội), mà chỉ có " + ft.free +
+    " lượt miễn phí, nên " + ft.hits + " chuyển nhượng còn lại bị trừ " + HIT_COST + " điểm mỗi cái, tổng -" + ft.hits * HIT_COST +
+    " điểm, trừ khi bạn bật Wildcard hoặc Free Hit. FPL chỉ công bố chip của vòng sắp tới sau hạn chốt đội nên chưa biết bạn đã bật chip chưa " +
+    "(chip đã dùng ở các vòng trước thì có trong dữ liệu).";
 }
 
 function transferUseText_(m) {
   if (m.use === "free") return "dùng 1 lượt miễn phí";
   if (m.use === "hold") return "chưa đáng dùng lượt miễn phí (lời quá ít), nên tích lượt";
   if (m.use === "hit") return "đáng trả -" + HIT_COST + " điểm vì người bán gần như không đá, lời gần bằng toàn bộ điểm người mua";
+  if (m.dead && m.gain >= DEAD_BUYER_MIN) return "không trả thêm -" + HIT_COST + " điểm vì mỗi tuần chỉ nên ăn tối đa " + MAX_HITS + " lần -" + HIT_COST + ", để dành cho tuần sau";
   if (m.dead) return "không đáng trả -" + HIT_COST + " điểm vì người mua chưa đủ mạnh để bù";
   if (!m.starter) return "không đáng trả -" + HIT_COST + " điểm (người bán ngồi dự bị nên ít ảnh hưởng đến điểm)";
   return "không đáng trả -" + HIT_COST + " điểm (người bán chưa chắc nghỉ, lời thực tế chỉ khoảng 4-5 điểm)";
 }
 
-function transferFacts_(d, info) {
+function transferFacts_(d, info, withRules) {
   if (!info) {
     return "CHUYỂN NHƯỢNG gợi ý (chưa biết số lượt miễn phí vì chưa tải được lịch sử chuyển nhượng): " +
       (d.transfers.length ? d.transfers.map(function (t) {
@@ -226,21 +239,21 @@ function transferFacts_(d, info) {
       }).join(" | ") : "chưa thấy ai đáng thay");
   }
   const ft = info.ft;
-  if (info.chipSuspected) {
-    return "CHUYỂN NHƯỢNG: đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + ", vượt xa " + ft.free +
-      " lượt miễn phí, nên nhiều khả năng đã bật Wildcard hoặc Free Hit cho vòng này (FPL chưa cho biết trước hạn chốt). " +
-      "Không tính điểm trừ và không đề xuất thêm chuyển nhượng.";
+  if (info.overhaul) {
+    return "CHUYỂN NHƯỢNG: " + savedMovesText_(d, ft) + " Chưa đề xuất thêm chuyển nhượng.";
   }
   const plan = info.plan;
   const lines = [
-    "KẾ HOẠCH CHUYỂN NHƯỢNG cho GW" + d.gw + " (code đã tính sẵn, dùng đúng kết luận). Quy tắc đã chạy lùi 3 mùa: đổi người vẫn đá chỉ lời thực tế khoảng 4-5 điểm/5 vòng " +
-      "(xấp xỉ giá 1 lần -" + HIT_COST + ") nên chỉ dùng lượt miễn phí; chỉ trả -" + HIT_COST + " khi người bán gần như không đá và người mua từ " + DEAD_BUYER_MIN +
-      " điểm/5 vòng. Điểm lời mô hình báo thường cao gấp khoảng 2 lần thực tế.",
+    "KẾ HOẠCH CHUYỂN NHƯỢNG cho GW" + d.gw + " (code đã tính sẵn, dùng đúng kết luận)." + (withRules
+      ? " Quy tắc đã chạy lùi 3 mùa: đổi người vẫn đá chỉ lời thực tế khoảng 4-5 điểm/5 vòng (xấp xỉ giá 1 lần -" + HIT_COST + ") nên chỉ dùng lượt miễn phí; " +
+        "chỉ trả -" + HIT_COST + " khi người bán gần như không đá và người mua từ " + DEAD_BUYER_MIN + " điểm/5 vòng, tối đa " + MAX_HITS + " lần -" + HIT_COST +
+        " mỗi tuần. Điểm lời mô hình báo thường cao gấp khoảng 2 lần thực tế."
+      : ""),
     "Lượt miễn phí còn lại: " + ft.available + " (ước tính từ lịch sử, tối đa " + FREE_TRANSFER_CAP + "). Mỗi chuyển nhượng vượt mức bị trừ " + HIT_COST +
       " điểm. Tiền trong túi £" + d.bank + "m (giá bán chỉ giữ một nửa phần giá tăng)."
   ];
-  if (ft.hits > 0) lines.push("Đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + ", vượt " + ft.hits + " lượt nên đang bị trừ " + ft.hits * HIT_COST + " điểm.");
-  else if (d.savedTransfers > 0) lines.push("Đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + " (đã trừ vào số lượt còn lại).");
+  if (ft.hits > 0) lines.push(savedMovesText_(d, ft));
+  else if (d.savedTransfers > 0) lines.push("Trong app FPL bạn đã thực hiện sẵn " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + " (chưa chốt đội), đã trừ vào số lượt miễn phí còn lại.");
 
   plan.moves.forEach(function (m, i) {
     lines.push((i + 1) + ") Bán " + m.out.name + " (" + m.out.team + ", " + (m.starter ? "đá chính" : "dự bị") + ", 5 vòng " + m.out.ep5 + "đ" +
@@ -329,8 +342,9 @@ function chipFacts_(d, pool, season, history, question, info) {
     lines.push("TRẢ LỜI TRỰC TIẾP (dùng đúng ý này): " + rows.filter(function (r) { return asked.indexOf(r.chip) !== -1; })
       .map(function (r) { return r.advice; }).join(" "));
   }
-  if (info && info.chipSuspected) {
-    lines.push("LƯU Ý: đã lưu " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + ", nhiều khả năng đã bật Wildcard hoặc Free Hit cho vòng này (FPL chưa cho biết).");
+  if (info && info.ft.hits > 0) {
+    lines.push("LƯU Ý: trong app FPL bạn đã thực hiện sẵn " + d.savedTransfers + " chuyển nhượng cho GW" + d.gw + " (chưa chốt đội), mà chỉ có " + info.ft.free +
+      " lượt miễn phí, nên " + info.ft.hits + " chuyển nhượng bị trừ điểm nếu không bật chip. FPL chỉ công bố chip của vòng sắp tới sau hạn chốt đội nên chưa biết bạn đã bật Wildcard hoặc Free Hit chưa.");
   }
   lines.push("CHIP (mỗi chip có 2 lượt; mỗi vòng chỉ dùng được 1 chip; điểm dự kiến các vòng sau tính theo phong độ hiện tại):");
   rows.forEach(function (r) { lines.push("- " + r.advice); });
@@ -415,7 +429,9 @@ function buildAiFacts_(d, topics, mentioned, question) {
     "m. (đ = điểm dự kiến của trợ lý, độ khó 1 dễ - 5 khó)"];
   if (has("captain")) parts.push(captainFacts_(d));
   if (has("h2h")) parts.push(h2hFacts_(d));
-  if (showPlan) parts.push(transferFacts_(d, info));
+  // The rules paragraph is only worth its tokens when the question is about transfers or chips;
+  // a general question (default packs + chip summary) gets the plan without it.
+  if (showPlan) parts.push(transferFacts_(d, info, !has("chipsBrief")));
   if (has("health")) parts.push(healthFacts_(d));
   if (has("chips") && pool) parts.push(chipFacts_(d, pool, season, history, question, info));
   else if (has("chipsBrief") && pool) parts.push(chipBriefFacts_(d, pool, season, history));

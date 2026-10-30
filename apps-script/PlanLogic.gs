@@ -29,9 +29,10 @@ const FREE_MIN_GAIN = 2;           // predicted gain below which a free transfer
 const WORTH_GAIN = 6;              // predicted gain of a swap "worth making"; counts towards the Wildcard rule
 const DEAD_EP5 = 1;                // five-gameweek points of a starter who will not play
 const DEAD_BUYER_MIN = 12;         // five-gameweek points a buyer needs for a hit to be worth it
+const MAX_HITS = 1;                // league owner's rule (2026-10-30): at most one -4 hit per week, on top of the free transfers
 const WILDCARD_MIN_HITS = 2;       // hits a manager would pay before a Wildcard is worth considering
 const PLAN_MAX_MOVES = 5;          // swaps weighed in one plan
-const CHIP_SUSPECT_EXTRA = 2;      // saved transfers beyond free + this suggest a Wildcard / Free Hit is active
+const OVERHAUL_EXTRA = 2;          // saved transfers beyond free + this: the squad is being rebuilt, so no further swaps are suggested
 
 /** Expected points of a player in gameweek w, from today's form and fitness. */
 function xpInGameweek_(pool, season, p, w) {
@@ -185,8 +186,8 @@ function adviseChip_(pool, season, rule, label, gw, starters, bench, clubs, sign
  * week after a chip, as the official text might suggest, mispredicted the hits
  * of four managers.
  *
- * Cannot see a chip already active for the coming gameweek, or a one-off
- * top-up the game may grant.
+ * Cannot see a chip activated for the coming gameweek (the API publishes it
+ * only once the deadline has passed), or a one-off top-up the game may grant.
  *
  * @param {Array<{event: number, event_transfers: number, event_transfers_cost: number}>} current entry history rows
  * @param {Array<{name: string, event: number}>} chips played
@@ -292,7 +293,7 @@ function planTransfers_(ideas, squad, free, bank) {
       // A free transfer at the cap is lost if unused, so any gain is worth taking.
       m.use = m.gain >= FREE_MIN_GAIN || (atCap && m.gain > 0) ? "free" : "hold";
     } else {
-      m.use = m.dead && m.gain >= DEAD_BUYER_MIN ? "hit" : "skip";
+      m.use = m.dead && m.gain >= DEAD_BUYER_MIN && hits < MAX_HITS ? "hit" : "skip";
     }
     if (m.use === "free") freeUsed++;
     if (m.use === "hit") hits++;

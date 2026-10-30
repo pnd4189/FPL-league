@@ -11,6 +11,9 @@
 const AI_BASE_URL = "https://inference.dahl.global";
 const AI_MODELS_TTL = 3600;     // seconds — how long the model list is trusted
 const AI_FETCH_TIMEOUT_MS = 55000;
+// A further model is only tried while this little time has passed since the request began: one
+// attempt can run a minute, and the browser gives up after 90 seconds.
+const AI_LATE_START_MS = 25000;
 
 // Models tried in this order when the gateway offers them. MiniMax is the only
 // one verified to answer on the free allowance; the other two are often at
@@ -58,11 +61,17 @@ function stripThinking_(text) {
   return out.replace(/^\s+|\s+$/g, "");
 }
 
+/** The model sometimes writes markdown despite being told not to; the page shows plain text. */
+function plainText_(text) {
+  return String(text || "").replace(/\*\*|__/g, "").replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/^\s*[-*]\s+/gm, "").replace(/^\s+|\s+$/g, "");
+}
+
 /**
  * One chat completion, falling back to the next model when a call fails.
  *
  * @param {Array<{role: string, content: string}>} messages
- * @param {{maxTokens?: number, temperature?: number}} [opts]
+ * @param {{maxTokens?: number, temperature?: number, startedAt?: number}} [opts] startedAt: when the whole
+ *   request began, so a late failure does not start yet another slow attempt
  * @return {{ok: boolean, text: string, model: string, ms: number, usage: Object|null, error: string}}
  *   error is one of "no_key", "no_tokens", "busy", "auth", "empty", "failed"
  */
@@ -79,7 +88,10 @@ function callAi_(messages, opts) {
   if (!models.length) models = AI_MODEL_PREFERENCE.slice();
 
   let error = "failed";
+  let attempts = 0;
   for (const model of models.slice(0, 3)) {
+    if (attempts > 0 && options.startedAt && Date.now() - options.startedAt > AI_LATE_START_MS) break;
+    attempts++;
     const started = Date.now();
     let response;
     try {
@@ -116,7 +128,7 @@ function callAi_(messages, opts) {
       error = "failed";
       continue;
     }
-    const text = stripThinking_(body.choices && body.choices[0] && body.choices[0].message && body.choices[0].message.content);
+    const text = plainText_(stripThinking_(body.choices && body.choices[0] && body.choices[0].message && body.choices[0].message.content));
     if (!text) {
       error = "empty";
       continue;

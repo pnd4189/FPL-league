@@ -12,13 +12,15 @@
  */
 
 // Bump when the facts a comment is written from change, so old comments are rewritten once.
-const AI_REVIEW_VERSION = 2;
+const AI_REVIEW_VERSION = 3;
 const AI_REVIEW_BUSY_TTL = 100;      // seconds — a comment being written blocks a second writer
 const AI_REVIEW_FAIL_TTL = 1800;     // seconds — after a failure, don't retry the same numbers
 const AI_REVIEW_DAILY_LIMIT = 120;   // comments written per day, a safety net against a loop
 const AI_CHAT_DAILY_LIMIT = 10;      // questions per manager per day (Vietnam time)
 const AI_CHAT_MAX_QUESTION = 300;    // characters
 const AI_CHAT_MAX_FAILED_CODES = 30; // wrong codes per hour before chat locks for everyone
+// A question with no topic gets these packs (injuries show up in the transfer plan), kept small for speed.
+const AI_CHAT_DEFAULT_TOPICS = ["captain", "h2h", "transfers", "chipsBrief"];
 const AI_CHAT_MEMORY_TURNS = 2;      // earlier questions kept so follow-ups make sense
 const AI_CHAT_MEMORY_TTL = 1800;     // seconds
 const AI_RETRY_BEFORE_MS = 18000;    // only rewrite a bad answer if time is left (browser waits 58s, one fetch dies at 60s)
@@ -26,13 +28,27 @@ const AI_LOG_SHEET = "AI_Chat_Log";
 const AI_LOG_DAYS = 30;              // questions are kept a month, then deleted
 const AI_LOG_MAX_ROWS = 3000;
 
+// Tone drawn from public Vietnamese FPL writing (vnfantasy.net, voz.vn): the
+// members' own Facebook groups and chats are not publicly readable. Only terms
+// seen several times are listed; forum slang such as "thím" is left out on purpose.
+// No example sentences: the small model copied them word for word, out of context.
+const AI_TONE =
+  "Giọng văn: người trong cộng đồng FPL Việt Nam, thân thiện, hay đùa nhẹ nhưng không thô; câu ngắn, đời thường. " +
+  "Xưng \"mình\", gọi người hỏi bằng tên HLV hoặc \"bạn\", nói chung cả league thì \"ae\"; không đoán giới tính (không dùng anh/chị/em); không dùng \"mày\", \"tao\" hay từ thô. " +
+  "Kết luận trước, lý do sau, chen 1 câu đùa tự nhiên (tối đa 2, không đùa 2 câu liền; nghĩ không ra câu đùa hay thì thôi, đừng gượng), " +
+  "rồi để cửa nếu có điều kiện đổi quyết định. " +
+  "Giữ thuật ngữ gốc (cap, hit, Wildcard, Free Hit, FT, rank, bench); có thể dùng \"con hàng\" (cầu thủ), \"nổ\" (ghi điểm lớn), " +
+  "\"tịt ngòi\", \"âm điểm\", \"leo rank\"; không bịa từ lóng mới. " +
+  "Đùa vào quyết định, kết quả vòng đấu hoặc tự chọc mình; không đùa vào con người, tiền bạc, cá cược, sức khoẻ tinh thần, chấn thương nặng của cầu thủ. " +
+  "Chọc xong phải có một câu khuyên hoặc an ủi thật. " +
+  "Câu đùa không được đổi con số, tên cầu thủ, kết luận. Không thêm lời khuyên, mẹo hay nhận xét nào ngoài DỮ LIỆU: kể cả về phong độ, khả năng ghi bàn, sân bóng, hàng thủ đối thủ hay lối chơi. ";
+
 const AI_RULES =
   "Bạn là trợ lý Fantasy Premier League của một league bạn bè 14 người (HTCV). " +
-  "Viết bằng tiếng Việt đời thường, thân thiện, lịch sự, ngắn gọn, dễ hiểu, không dùng thuật ngữ khó, không dùng markdown. " +
-  "Xưng \"mình\", gọi người hỏi bằng tên HLV hoặc \"bạn\"; không bao giờ dùng \"mày\", \"tao\" hay từ thô. " +
-  "CHỈ dùng các cầu thủ, con số và kết luận có trong phần DỮ LIỆU; không tự tính toán hay so sánh lại số liệu; " +
+  AI_TONE +
+  "Không dùng markdown. " +
+  "CHỈ dùng các cầu thủ, con số và kết luận có trong phần DỮ LIỆU; không tự tính toán hay so sánh lại số liệu; không thêm cầu thủ, số liệu, tin tức hay kết quả trận đấu nào khác. " +
   "Khi DỮ LIỆU có KẾ HOẠCH CHUYỂN NHƯỢNG: nêu tên cầu thủ nên bán và nên mua, nói rõ nên dùng bao nhiêu lượt miễn phí và có đáng trả -4 điểm hay không, đúng theo phần KẾT LUẬN; không tự đổi kết luận. " +
-  "không thêm cầu thủ, số liệu, tin tức hay kết quả trận đấu nào khác. " +
   "Nếu câu hỏi cần thông tin không có trong DỮ LIỆU (tin họp báo, đội hình ra sân dự kiến, tin đồn...) thì nói rõ là chưa có dữ liệu thay vì đoán. " +
   "Không tự khuyên dùng chip nào nếu DỮ LIỆU không nói nên dùng chip đó. " +
   "Điểm dự kiến chỉ là ước tính, không bao giờ cam kết kết quả. " +
@@ -55,22 +71,23 @@ function poolPlayerNames_(pool) {
  *   outcome: "ai", "ai_retry" or "rejected" (the answer kept straying)
  */
 function askCheckedAi_(messages, facts, pool, startedAt) {
-  const first = callAi_(messages, { maxTokens: 1200 });
-  if (!first.ok) return { ok: false, text: "", model: first.model, error: first.error, outcome: "error" };
+  const first = callAi_(messages, { maxTokens: 1200, startedAt: startedAt });
+  if (!first.ok) return { ok: false, text: "", model: first.model, error: first.error, outcome: "error", strayed: "" };
   const names = pool ? poolPlayerNames_(pool) : [];
   const check = checkAnswer_(first.text, facts, names);
-  if (check.ok) return { ok: true, text: first.text, model: first.model, error: "", outcome: "ai" };
-  if (Date.now() - startedAt > AI_RETRY_BEFORE_MS) return { ok: true, text: "", model: first.model, error: "", outcome: "rejected" };
+  if (check.ok) return { ok: true, text: first.text, model: first.model, error: "", outcome: "ai", strayed: "" };
+  const strayed = check.names.concat(check.numbers).join(", ");
+  if (Date.now() - startedAt > AI_RETRY_BEFORE_MS) return { ok: true, text: "", model: first.model, error: "", outcome: "rejected", strayed: strayed };
 
   const retry = callAi_(messages.concat([
     { role: "assistant", content: first.text },
-    { role: "user", content: "Câu trả lời trên có chi tiết không có trong DỮ LIỆU: " + check.names.concat(check.numbers).join(", ") +
+    { role: "user", content: "Câu trả lời trên có chi tiết không có trong DỮ LIỆU: " + strayed +
       ". Hãy viết lại, chỉ dùng đúng tên, số và kết luận trong DỮ LIỆU." }
-  ]), { maxTokens: 1200 });
+  ]), { maxTokens: 1200, startedAt: startedAt });
   if (retry.ok && checkAnswer_(retry.text, facts, names).ok) {
-    return { ok: true, text: retry.text, model: retry.model, error: "", outcome: "ai_retry" };
+    return { ok: true, text: retry.text, model: retry.model, error: "", outcome: "ai_retry", strayed: strayed };
   }
-  return { ok: true, text: "", model: first.model, error: "", outcome: "rejected" };
+  return { ok: true, text: "", model: first.model, error: "", outcome: "rejected", strayed: strayed };
 }
 
 // ---- C: one comment per manager, rewritten when the numbers change ---------
@@ -298,16 +315,18 @@ function writeChatMemory_(managerId, memory) {
  * One anonymous row per answered question: no manager, no code, no answer.
  * Old rows are pruned hourly by pruneAiChatLog_.
  */
-function logAiChat_(gw, topics, question, outcome, ms, model) {
+function logAiChat_(gw, topics, question, outcome, ms, model, note) {
   try {
     let sheet = getSheet(AI_LOG_SHEET);
     if (!sheet) {
       const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
       sheet = ss.insertSheet(AI_LOG_SHEET);
-      sheet.appendRow(["Thời gian", "GW", "Chủ đề", "Câu hỏi", "Kết quả", "Thời gian xử lý (ms)", "Model"]);
+      sheet.appendRow(["Thời gian", "GW", "Chủ đề", "Câu hỏi", "Kết quả", "Thời gian xử lý (ms)", "Model", "Chi tiết AI viết lệch"]);
       sheet.setFrozenRows(1);
     }
-    sheet.appendRow([new Date(), gw, topics.join(", "), escapeForCell_(question), outcome, ms, model || ""]);
+    if (sheet.getLastColumn() < 8) sheet.getRange(1, 8).setValue("Chi tiết AI viết lệch");
+    // Names and numbers the AI wrote that were not in its facts: no manager, no code.
+    sheet.appendRow([new Date(), gw, topics.join(", "), escapeForCell_(question), outcome, ms, model || "", escapeForCell_(String(note || "").slice(0, 120))]);
   } catch (e) { /* logging never blocks an answer */ }
 }
 
@@ -340,6 +359,7 @@ const AI_ERROR_TEXT = {
  * fresh=1 to forget the earlier questions.
  */
 function handleAiChat_(params) {
+  const arrived = Date.now();
   const chatCode = (PropertiesService.getScriptProperties().getProperty("LEAGUE_CHAT_CODE") || "").trim();
   if (!getAiKey_() || !chatCode) return { status: "error", code: "disabled", message: "Chat AI chưa được bật." };
 
@@ -388,7 +408,7 @@ function handleAiChat_(params) {
   }
   // Nothing recognised: send the everyday packs plus one line of chip state, so
   // a question the keywords missed still gets the basic facts.
-  if (!topics.length && !mentioned.length) topics = AI_DEFAULT_TOPICS.concat(["chipsBrief"]);
+  if (!topics.length && !mentioned.length) topics = AI_CHAT_DEFAULT_TOPICS.slice();
 
   const facts = buildAiFacts_(d, topics, mentioned, question);
   const messages = [{ role: "system", content: AI_RULES + " Trả lời câu hỏi bằng tối đa khoảng 110 từ." }];
@@ -399,7 +419,7 @@ function handleAiChat_(params) {
   messages.push({ role: "user", content: "DỮ LIỆU:\n" + facts + "\n\nCÂU HỎI của " + manager.manager + ": " + question });
 
   const checkFacts = facts + "\n" + question + "\n" + memory.map(function (t) { return t.q + " " + t.a; }).join("\n");
-  const result = askCheckedAi_(messages, checkFacts, pool, started);
+  const result = askCheckedAi_(messages, checkFacts, pool, arrived);
 
   if (!result.ok) {
     refundChatQuestion_(manager.id);
@@ -413,6 +433,6 @@ function handleAiChat_(params) {
     : "Trợ lý AI chưa diễn đạt được chắc chắn, nên đây là số liệu gốc cho câu hỏi của bạn:\n" + facts.split("\n").slice(1).join("\n");
   memory.push({ q: question, a: answer.slice(0, 400) });
   writeChatMemory_(manager.id, memory);
-  logAiChat_(d.gw, topics, question, result.outcome, Date.now() - started, result.model);
+  logAiChat_(d.gw, topics, question, result.outcome, Date.now() - started, result.model, result.strayed);
   return { status: "success", data: { answer: answer, source: result.text ? "ai" : "facts", outcome: result.outcome, remaining: remaining, limit: AI_CHAT_DAILY_LIMIT } };
 }
