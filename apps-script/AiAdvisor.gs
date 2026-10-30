@@ -11,8 +11,9 @@
  * code that unlocks the chat. Neither is ever returned to the browser or logged.
  */
 
-const AI_REVIEW_WINDOW_HOURS = 36;   // comments are written this long before the deadline
-const AI_REVIEW_BUDGET_MS = 200000;  // stop starting new comments after this long in one run
+const AI_REVIEW_BUSY_TTL = 100;      // seconds — a comment being written blocks a second writer
+const AI_REVIEW_FAIL_TTL = 1800;     // seconds — after a failure, don't retry the same numbers
+const AI_REVIEW_DAILY_LIMIT = 120;   // comments written per day, a safety net against a loop
 const AI_CHAT_DAILY_LIMIT = 10;      // questions per manager per day (Vietnam time)
 const AI_CHAT_MAX_QUESTION = 300;    // characters
 const AI_CHAT_MAX_FAILED_CODES = 30; // wrong codes per hour before chat locks for everyone
@@ -69,69 +70,135 @@ function askCheckedAi_(messages, facts, pool, startedAt) {
   return { ok: true, text: "", model: first.model, error: "", outcome: "rejected" };
 }
 
-// ---- C: one comment per manager per gameweek -----------------------------
+// ---- C: one comment per manager, rewritten when the numbers change ---------
 
 function aiReviewKey_(gw, managerId) {
   return "ai_review|" + gw + "|" + managerId;
 }
 
+function hashText_(text) {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+  return h.toString(36) + "." + text.length;
+}
+
 /**
- * Write the missing comments for the coming gameweek. Runs from the hourly
- * trigger inside the last AI_REVIEW_WINDOW_HOURS before the deadline, a few
- * managers per run so a slow model cannot hit the six-minute limit. A comment
- * that fails the fact check is not stored: no comment beats a wrong one.
+ * A short fingerprint of what the comment is about: who to captain, the H2H
+ * lead, the suggested swaps and who is injured. Expected points are left out on
+ * purpose — they drift by a tenth whenever FPL refreshes minutes or form, and
+ * hashing them would rewrite the comment on almost every visit.
  */
-function generateAiReviews_(state) {
-  if (!getAiKey_() || !state || !state.nextGw) return;
-  const event = state.events.filter(function (e) { return e.id === state.nextGw; })[0];
-  if (!event) return;
-  const hoursLeft = (new Date(event.deadline).getTime() - Date.now()) / 3600000;
-  if (hoursLeft <= 0 || hoursLeft > AI_REVIEW_WINDOW_HOURS) return;
+function reviewFingerprint_(d) {
+  return hashText_([
+    d.gw, d.id, d.savedTransfers, d.bank,
+    d.captains.map(function (p) { return p.id; }).join(","),
+    d.opponent ? d.opponent.id + ":" + h2hLead_(d) : "none",
+    d.transfers.map(function (t) {
+      return t.out.id + ">" + t.ins.slice(0, 2).map(function (p) { return p.id; }).join("/");
+    }).join(";"),
+    d.health.map(function (h) { return h.name + ":" + h.why; }).join(";")
+  ].join("|"));
+}
 
-  const props = PropertiesService.getScriptProperties();
-  const pool = getAdvisorPool_(state.nextGw, state.finishedGws);
-  const started = Date.now();
-  for (const manager of getActivePlayers()) {
-    if (Date.now() - started > AI_REVIEW_BUDGET_MS) break;
-    const key = aiReviewKey_(state.nextGw, manager.id);
-    if (props.getProperty(key)) continue;
-
-    const advice = getAdvisorData(manager.id);
-    if (advice.status !== "success") continue;
-    const facts = buildAiFacts_(advice.data, AI_DEFAULT_TOPICS, [], "");
-    const result = askCheckedAi_([
-      { role: "system", content: AI_RULES },
-      { role: "user", content: "DỮ LIỆU:\n" + facts + "\n\nHãy viết nhận xét tối đa 100 từ cho " + advice.data.manager +
-        " trước hạn chốt đội, gồm 3 ý nối liền: (1) nên chọn ai làm captain và vì sao, (2) thế đối đầu H2H và nên lưu ý gì, " +
-        "(3) có cần chuyển nhượng hoặc xử lý cầu thủ chấn thương không. Nói thẳng vào việc." }
-    ], facts, pool, Date.now());
-    if (!result.ok || !result.text) {
-      logStatus("AI review for " + manager.manager + " skipped: " + (result.error || result.outcome));
-      if (result.error === "no_tokens" || result.error === "auth" || result.error === "no_key") break;
-      continue;
-    }
-
-    props.setProperty(key, JSON.stringify({ text: result.text.slice(0, 1500), at: new Date().toISOString(), model: result.model }));
-    // Only the coming gameweek's comments are ever shown.
-    for (const old of props.getKeys()) {
-      if (old.indexOf("ai_review|") === 0 && old.indexOf("ai_review|" + state.nextGw + "|") !== 0) props.deleteProperty(old);
-    }
+/** The stored comment of a manager for a gameweek, or null. */
+function readReview_(gw, managerId) {
+  const stored = PropertiesService.getScriptProperties().getProperty(aiReviewKey_(gw, managerId));
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    return null;
   }
 }
 
-/** Advisor result plus the stored AI comment for that manager, when one exists. */
+/** What the browser sees of a stored comment; `fresh` = written for these numbers. */
+function reviewView_(stored, fp) {
+  return stored ? { text: stored.text, at: stored.at, fresh: stored.fp === fp } : null;
+}
+
+/** Take one write from the daily allowance, forgetting earlier days. */
+function takeReviewBudget_() {
+  const props = PropertiesService.getScriptProperties();
+  const key = "ai_review_count|" + vietnamDay_();
+  const used = parseInt(props.getProperty(key) || "0", 10);
+  if (used >= AI_REVIEW_DAILY_LIMIT) return false;
+  props.setProperty(key, String(used + 1));
+  for (const old of props.getKeys()) {
+    if (old.indexOf("ai_review_count|") === 0 && old !== key) props.deleteProperty(old);
+  }
+  return true;
+}
+
+/** Advisor result plus the stored comment and whether it matches today's numbers. Never calls the AI. */
 function getAdvisorWithReview_(entryId) {
   const result = getAdvisorData(entryId);
   if (result.status !== "success") return result;
-  let review = null;
-  const stored = PropertiesService.getScriptProperties().getProperty(aiReviewKey_(result.data.gw, entryId));
-  if (stored) {
-    try {
-      review = JSON.parse(stored);
-    } catch (e) { /* ignore a corrupt value */ }
-  }
-  result.data.aiReview = review ? { text: review.text, at: review.at } : null;
+  const d = result.data;
+  d.aiReview = reviewView_(readReview_(d.gw, d.id), reviewFingerprint_(d));
   return result;
+}
+
+/**
+ * Return the comment for the manager's current numbers, writing it first when
+ * the stored one was written for different numbers. Can take up to ~80s, so
+ * the browser asks for it after the advice is already on screen.
+ *
+ * state: "fresh" (review matches), "pending" (someone else is writing it),
+ * "failed" (could not write one now; review is the older text, if any).
+ */
+function handleAiReview_(entryId) {
+  const started = Date.now();
+  const advice = getAdvisorData(entryId);
+  if (advice.status !== "success") return advice;
+  const d = advice.data;
+  const fp = reviewFingerprint_(d);
+  const stored = readReview_(d.gw, d.id);
+  const reply = function (state, review) {
+    return { status: "success", data: { state: state, review: review } };
+  };
+  if (stored && stored.fp === fp) return reply("fresh", reviewView_(stored, fp));
+
+  const old = reviewView_(stored, fp);
+  if (!getAiKey_()) return reply("failed", old);
+  const cache = CacheService.getScriptCache();
+  const failKey = "ai_review_fail|" + d.id + "|" + fp;
+  const busyKey = "ai_review_busy|" + d.id + "|" + fp;
+  if (cache.get(failKey)) return reply("failed", old);
+  if (cache.get(busyKey)) return reply("pending", old);
+  if (!takeReviewBudget_()) return reply("failed", old);
+
+  cache.put(busyKey, "1", AI_REVIEW_BUSY_TTL);
+  let result;
+  try {
+    const state = getSeasonState();
+    const pool = state ? getAdvisorPool_(state.nextGw, state.finishedGws) : null;
+    const facts = buildAiFacts_(d, AI_DEFAULT_TOPICS, [], "");
+    result = askCheckedAi_([
+      { role: "system", content: AI_RULES },
+      { role: "user", content: "DỮ LIỆU:\n" + facts + "\n\nHãy viết nhận xét tối đa 100 từ cho " + d.manager +
+        " trước hạn chốt đội, gồm 3 ý nối liền: (1) nên chọn ai làm captain và vì sao, (2) thế đối đầu H2H và nên lưu ý gì, " +
+        "(3) có cần chuyển nhượng hoặc xử lý cầu thủ chấn thương không. Nói thẳng vào việc." }
+    ], facts, pool, started);
+  } finally {
+    cache.remove(busyKey);
+  }
+
+  if (!result.ok || !result.text) {
+    // A comment that strays or an AI that is down is not retried for the same
+    // numbers for a while, so every visit does not burn tokens and time.
+    cache.put(failKey, "1", AI_REVIEW_FAIL_TTL);
+    logStatus("AI review for " + d.manager + " not written: " + (result.error || result.outcome));
+    return reply("failed", old);
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const record = { text: result.text.slice(0, 1500), at: new Date().toISOString(), model: result.model, fp: fp };
+  props.setProperty(aiReviewKey_(d.gw, d.id), JSON.stringify(record));
+  // Only the coming gameweek's comments are ever shown.
+  for (const key of props.getKeys()) {
+    if (key.indexOf("ai_review|") === 0 && key.indexOf("ai_review|" + d.gw + "|") !== 0) props.deleteProperty(key);
+  }
+  return reply("fresh", reviewView_(record, fp));
 }
 
 // ---- A: league chat -------------------------------------------------------

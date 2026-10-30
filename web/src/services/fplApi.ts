@@ -9,6 +9,7 @@ import {
   AdvisorData,
   AdvisorPlayer,
   ChatReply,
+  AiReview,
 } from '../types';
 import {
   INITIAL_CLASSIC_STANDINGS,
@@ -401,5 +402,22 @@ export async function askAdvisorChat(entryId: number, code: string, question: st
   } catch (err) {
     console.warn('Advisor chat unavailable:', err);
     return { ok: false, answer: '', source: '', message: 'Chưa nhận được câu trả lời (quá lâu hoặc mất kết nối). Câu hỏi này không bị tính, thử lại nhé.', code: 'network', remaining: null, limit: null };
+  }
+}
+
+// The backend may write a new comment first (one AI call, up to ~80s), so this
+// waits longer than any other read. Never retried: the backend may still be
+// writing, and a second request would only get "pending".
+const REVIEW_TIMEOUT_MS = 90000;
+
+/** state: fresh = review matches the numbers, pending = someone else is writing it, failed = could not update. */
+export async function fetchAiReview(entryId: number): Promise<{ state: 'fresh' | 'pending' | 'failed'; review: AiReview | null }> {
+  try {
+    const json = await fetchJson(`${endpoint('ai_review')}&id=${entryId}`, REVIEW_TIMEOUT_MS, 0);
+    if (json?.status === 'success' && json.data) return { state: json.data.state, review: json.data.review ?? null };
+    return { state: 'failed', review: null };
+  } catch (err) {
+    console.warn('AI review unavailable:', err);
+    return { state: 'failed', review: null };
   }
 }

@@ -142,6 +142,9 @@ function doGet(e) {
       case "chat":
         result = handleAiChat_(params);
         break;
+      case "ai_review":
+        result = handleAiReview_(params.id);
+        break;
       case "advisor_hunt":
         result = getAdvisorHunt(params.pos, params.max);
         break;

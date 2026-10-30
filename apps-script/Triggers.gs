@@ -173,13 +173,7 @@ function hourlySettlementCheck() {
     }
   }
 
-  // The AI comment and log housekeeping are extras: a failure here must never
-  // break the check above.
-  try {
-    generateAiReviews_(state);
-  } catch (err) {
-    logStatus("AI reviews failed: " + err.message);
-  }
+  // Log housekeeping is an extra: a failure here must never break the check above.
   try {
     pruneAiChatLog_();
   } catch (err) {

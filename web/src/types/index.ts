@@ -283,9 +283,15 @@ export interface AdvisorData {
     theirProjected: number;
   } | null;
   transfers: AdvisorTransferIdea[];
-  /** AI-written comment for the coming gameweek, once the backend has produced it. */
-  aiReview?: { text: string; at: string } | null;
+  /** The stored AI comment; `fresh` is false when the numbers changed since it was written. */
+  aiReview?: AiReview | null;
   updatedAt: string;
+}
+
+export interface AiReview {
+  text: string;
+  at: string;
+  fresh: boolean;
 }
 
 export interface ChatReply {

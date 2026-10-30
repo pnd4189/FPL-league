@@ -160,12 +160,20 @@ function captainFacts_(d) {
     (d.captains.map(function (p, i) { return (i + 1) + ") " + aiShortText_(p); }).join("; ") || "chưa có");
 }
 
+/** Who leads the head-to-head on expected points: "hon", "kem", "ngang" or "" without an opponent. */
+function h2hLead_(d) {
+  if (!d.opponent) return "";
+  const gap = Math.round((d.opponent.myProjected - d.opponent.theirProjected) * 10) / 10;
+  return Math.abs(gap) < 0.5 ? "ngang" : (gap > 0 ? "hon" : "kem");
+}
+
 function h2hFacts_(d) {
   if (!d.opponent) return "Vòng này " + d.manager + " không có đối thủ H2H.";
-  const gap = Math.round((d.opponent.myProjected - d.opponent.theirProjected) * 10) / 10;
-  const verdict = Math.abs(gap) < 0.5
+  const gap = Math.abs(Math.round((d.opponent.myProjected - d.opponent.theirProjected) * 10) / 10);
+  const lead = h2hLead_(d);
+  const verdict = lead === "ngang"
     ? "hai bên gần như ngang nhau"
-    : (gap > 0 ? d.manager + " đang HƠN " : d.manager + " đang KÉM ") + Math.abs(gap) + " điểm dự kiến";
+    : d.manager + (lead === "hon" ? " đang HƠN " : " đang KÉM ") + gap + " điểm dự kiến";
   return [
     "ĐỐI THỦ H2H vòng " + d.gw + ": " + d.opponent.manager + ". Điểm dự kiến cả đội: " + d.manager + " " + d.opponent.myProjected +
       ", " + d.opponent.manager + " " + d.opponent.theirProjected + ". NHẬN ĐỊNH (dùng đúng ý này): " + verdict + ".",
