@@ -173,10 +173,16 @@ function hourlySettlementCheck() {
     }
   }
 
-  // The AI comment is a bonus: a failure here must never break the check above.
+  // The AI comment and log housekeeping are extras: a failure here must never
+  // break the check above.
   try {
     generateAiReviews_(state);
   } catch (err) {
     logStatus("AI reviews failed: " + err.message);
+  }
+  try {
+    pruneAiChatLog_();
+  } catch (err) {
+    logStatus("AI chat log prune failed: " + err.message);
   }
 }

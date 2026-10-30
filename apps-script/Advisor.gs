@@ -23,15 +23,36 @@ const ADVISOR_REPLY_TTL = 600;   // seconds — one manager's advice
  * @return {Object|null} see AdvisorLogic.gs, or null when the FPL api is down
  */
 function getAdvisorPool_(gw, played) {
-  const cache = CacheService.getScriptCache();
-  const cacheKey = "advisor_pool2|" + gw;
-  const cached = cache.get(cacheKey);
+  const cached = CacheService.getScriptCache().get("advisor_pool2|" + gw);
   if (cached) {
     try {
       return JSON.parse(cached);
     } catch (e) { /* rebuild below */ }
   }
+  const built = buildAdvisorSnapshot_(gw, played);
+  return built ? built.pool : null;
+}
 
+/**
+ * The rest of the season for chip planning: every remaining fixture by club
+ * and the chip windows from bootstrap. Kept apart from the pool so the pool
+ * stays well under the 100 KB cache limit.
+ *
+ * @return {{gw: number, fixtures: Object, chips: Array<{name: string, start: number, stop: number}>}|null}
+ */
+function getAdvisorSeason_(gw, played) {
+  const cached = CacheService.getScriptCache().get("advisor_season|" + gw);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) { /* rebuild below */ }
+  }
+  const built = buildAdvisorSnapshot_(gw, played);
+  return built ? built.season : null;
+}
+
+function buildAdvisorSnapshot_(gw, played) {
+  const cache = CacheService.getScriptCache();
   const bootstrap = fetchBootstrap();
   const fixtureList = fetchFPL("fixtures/", { silent: true });
   if (!bootstrap || !bootstrap.elements || !fixtureList) return null;
@@ -60,19 +81,33 @@ function getAdvisorPool_(gw, played) {
   }
 
   const fixtures = {};
+  const remaining = {};
+  for (const team of bootstrap.teams) remaining[team.short_name] = [];
   for (const f of fixtureList) {
-    if (!f.event || f.event < gw || f.event >= gw + ADVISOR_HORIZON) continue;
+    if (!f.event || f.event < gw) continue;
     const home = teamShort[f.team_h];
     const away = teamShort[f.team_a];
-    (fixtures[home] = fixtures[home] || []).push({ gw: f.event, opp: away, home: true, fdr: f.team_h_difficulty });
-    (fixtures[away] = fixtures[away] || []).push({ gw: f.event, opp: home, home: false, fdr: f.team_a_difficulty });
+    const h = { gw: f.event, opp: away, home: true, fdr: f.team_h_difficulty };
+    const a = { gw: f.event, opp: home, home: false, fdr: f.team_a_difficulty };
+    remaining[home].push(h);
+    remaining[away].push(a);
+    if (f.event < gw + ADVISOR_HORIZON) {
+      (fixtures[home] = fixtures[home] || []).push(h);
+      (fixtures[away] = fixtures[away] || []).push(a);
+    }
   }
 
   const pool = { gw: gw, played: played, players: players, fixtures: fixtures };
+  const season = {
+    gw: gw,
+    fixtures: remaining,
+    chips: (bootstrap.chips || []).map(function (c) { return { name: c.name, start: c.start_event, stop: c.stop_event }; })
+  };
   try {
-    cache.put(cacheKey, JSON.stringify(pool), ADVISOR_POOL_TTL);
+    cache.put("advisor_pool2|" + gw, JSON.stringify(pool), ADVISOR_POOL_TTL);
+    cache.put("advisor_season|" + gw, JSON.stringify(season), ADVISOR_POOL_TTL);
   } catch (e) { /* too large for the cache — rebuilt on the next request */ }
-  return pool;
+  return { pool: pool, season: season };
 }
 
 /**
@@ -121,7 +156,7 @@ function getAdvisorData(entryId) {
 
   const gw = state.nextGw;
   const cache = CacheService.getScriptCache();
-  const cacheKey = "advisor|" + manager.id + "|" + gw;
+  const cacheKey = "advisor2|" + manager.id + "|" + gw;
   const cached = cache.get(cacheKey);
   if (cached) {
     try {
@@ -160,9 +195,11 @@ function getAdvisorData(entryId) {
     data: {
       gw: gw,
       deadline: event ? event.deadline : null,
+      id: manager.id,
       manager: manager.manager,
       basedOnGw: state.displayGw,
       savedTransfers: mine.moves,
+      squad: mine.squad,
       bank: mine.bank / 10,
       captains: rankCaptains_(pool, mine.squad, gw, 3),
       health: squadHealth_(pool, mine.squad, gw),

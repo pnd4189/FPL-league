@@ -291,6 +291,7 @@ export interface AdvisorData {
 export interface ChatReply {
   ok: boolean;
   answer: string;
+  source: 'ai' | 'facts' | '';  // 'facts' = the AI strayed, raw figures shown instead
   message: string;
   code: string;      // backend error code, empty on success
   remaining: number | null;

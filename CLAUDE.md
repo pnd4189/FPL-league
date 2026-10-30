@@ -11,7 +11,7 @@ Google Apps Script (backend) + React/Vite/Tailwind (frontend) dashboard for the 
 ## Structure
 
 ```
-apps-script/        # 12 modular .gs files + manifest
+apps-script/        # 14 modular .gs files + manifest
   Config.gs          Season config, 14 managers, month→GW map, safe logging
   FPLApi.gs          FPL API fetch helpers + cached season state
   Live.gs            In-play (provisional) gameweek scoring
@@ -19,7 +19,9 @@ apps-script/        # 12 modular .gs files + manifest
   AdvisorLogic.gs    Round-assistant scoring rules (pure logic, replayable)
   Advisor.gs         Round-assistant data: player/fixture pool, squads, endpoints
   Ai.gs              Dahl Inference client (OpenAI-compatible), model fallback, <think> stripping
-  AiAdvisor.gs       AI comment per manager per GW (hourly trigger) + league chat with limits
+  AiFacts.gs         Question routing (keywords → topics) + fact packs (captain, H2H, transfers, health, chips, league, players)
+  PlanLogic.gs       Chip timing, free-transfer estimate, AI answer checking (pure logic)
+  AiAdvisor.gs       AI comment per manager per GW (hourly trigger) + league chat, memory, 30-day log
   DataProcessor.gs   Parse & write settled data to Google Sheet (26 tabs)
   Triggers.gs        Auto-refresh 6h + hourly settlement check
   Menu.gs            Custom Sheet menu
@@ -36,7 +38,7 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 
 ## Development Rules
 
-- **Backend:** 12 separate .gs modules. Do NOT merge into one file.
+- **Backend:** 14 separate .gs modules. Do NOT merge into one file.
 - **Frontend:** React + TypeScript. No external UI libraries beyond lucide-react icons.
 - **Data sync:** settled data via 6h trigger + hourly settlement check + manual button. Page open does NOT run a full refresh — it polls `?action=live` instead.
 - **Live scoring:** standings must move during a gameweek. Live points come from `event/{gw}/live/` + cached squad picks; the website merges them onto the settled tables (`web/src/services/liveStandings.ts`). Never write live data to the Sheet.
@@ -67,7 +69,7 @@ web/                # React 19 + TypeScript + Vite 6 + Tailwind CSS
 - `?action=live` — Provisional in-play scores + H2H (90s cache, polled by the website)
 - `?action=h2h_schedule` — Real league fixtures for all 38 GWs from the FPL api (pairings + played points), 5-min cache
 - `?action=advisor&id=ENTRY_ID` — Round assistant for one manager (captain top 3, H2H edge/threat vs the coming opponent, transfer ideas, squad health), 10-min cache; read-only. Expected points are OUR model, never FPL's `ep_next` (this season `ep_next` == `form` == last-3-GW points / 3 for 89% of players and ignores the opponent): per-position least squares on ppg, form, xGI/90, minutes share, FDR, venue, price (`ADVISOR_XP_COEF` in AdvisorLogic.gs; refit with `tools/advisor-model/`). Captains = MID/FWD starters by next-GW xP; transfers/hunt rank by 5-GW xP; squads = latest GW picks + saved transfers for the coming GW
-- `?action=chat&id=ENTRY_ID&code=LEAGUE_CODE&q=QUESTION` — League chat (GET only: Apps Script answers no CORS preflight). Needs Script Properties `DAHL_API_KEY` + `LEAGUE_CHAT_CODE` (user-set, never in code or chat). 10 questions/manager/day (Vietnam time, refunded when the AI fails), 300-char questions, 30 wrong codes/hour locks the chat. Prompt = compact advisor text only (names + xP): a 3,000-token prompt took 30-43s on MiniMax, 500 tokens ~6s, and a single Apps Script fetch dies at 60s. The advisor text pre-computes the H2H verdict because MiniMax once read 40.8 vs 42.7 backwards
+- `?action=chat&id=ENTRY_ID&code=LEAGUE_CODE&q=QUESTION[&fresh=1]` — League chat (GET only: Apps Script answers no CORS preflight). Needs Script Properties `DAHL_API_KEY` + `LEAGUE_CHAT_CODE` (user-set, never in code or chat). 10 questions/manager/day (Vietnam time, refunded when the AI fails), 300-char questions, 30 wrong codes/hour locks the chat. Keywords route the question (`routeQuestion_`, chip names matched first; single accented syllables like bán/mua/giữ never matched without accents) to small fact packs (`buildAiFacts_`) — never dump everything: a 3,000-token prompt took 30-43s on MiniMax, ~500 tokens ~6s, and one Apps Script fetch dies at 60s. Every conclusion is computed in code (H2H verdict, chip state/timing incl. a TRẢ LỜI TRỰC TIẾP line for a named chip, free-transfer estimate) because MiniMax read 40.8 vs 42.7 backwards and said a used Triple Captain was still available. `checkAnswer_` rejects answers naming players or numbers not in the facts → one rewrite (only if the first call took <18s) → else the raw facts are returned (`source: facts`). Last 2 turns kept 30 min in CacheService (`fresh=1` resets); a follow-up naming a player gets only that player's facts. Each answered question is logged anonymously (no manager id, no code, no answer) to the `AI_Chat_Log` sheet, pruned hourly to 30 days / 3,000 rows. Web waits 90s (backend worst case ~80s). Real-AI check 2026-10-30: 14/14 eval answers factually right, median ~6s
 - `?action=advisor` also returns `aiReview` once the hourly trigger has written it (36h before the deadline, a few managers per run, kept in Script Properties `ai_review|GW|ID`)
 - `?action=advisor_hunt&pos=1-4&max=PRICE` — Best available players of a position under a price cap
 - `?action=season` — Current/display GW, live flag, month→GW buckets

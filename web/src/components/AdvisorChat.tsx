@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, MessageCircle, Send } from 'lucide-react';
+import { Loader2, MessageCircle, RotateCcw, Send } from 'lucide-react';
 import { askAdvisorChat } from '../services/fplApi';
 
 const CODE_KEY = 'htcv_fpl_chat_code';
@@ -14,6 +14,7 @@ interface Turn {
   question: string;
   answer: string;
   failed: boolean;
+  factsOnly: boolean;
 }
 
 const readSavedCode = (): string => {
@@ -28,6 +29,8 @@ export const AdvisorChat: React.FC<{ managerId: number; managerName: string }> =
   const [remaining, setRemaining] = useState<number | null>(null);
   const [limit, setLimit] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
+  // The backend remembers the last two questions for follow-ups; this starts over.
+  const [fresh, setFresh] = useState(false);
 
   const ask = async (text: string) => {
     const q = text.trim();
@@ -35,18 +38,19 @@ export const AdvisorChat: React.FC<{ managerId: number; managerName: string }> =
     if (!code.trim()) { setNotice('Hãy nhập mã chung của league trước (hỏi người tạo league).'); return; }
     setSending(true);
     setNotice('');
-    const reply = await askAdvisorChat(managerId, code.trim(), q);
+    const reply = await askAdvisorChat(managerId, code.trim(), q, fresh);
     if (reply.remaining !== null) setRemaining(reply.remaining);
     if (reply.limit !== null) setLimit(reply.limit);
     if (reply.ok) {
       try { localStorage.setItem(CODE_KEY, code.trim()); } catch { /* private mode */ }
-      setTurns(prev => [...prev, { question: q, answer: reply.answer, failed: false }]);
+      setTurns(prev => [...prev, { question: q, answer: reply.answer, failed: false, factsOnly: reply.source === 'facts' }]);
       setQuestion('');
+      setFresh(false);
     } else if (reply.code === 'bad_code' || reply.code === 'locked' || reply.code === 'disabled') {
       setNotice(reply.message);
       if (reply.code === 'bad_code') { try { localStorage.removeItem(CODE_KEY); } catch { /* ignore */ } }
     } else {
-      setTurns(prev => [...prev, { question: q, answer: reply.message, failed: true }]);
+      setTurns(prev => [...prev, { question: q, answer: reply.message, failed: true, factsOnly: false }]);
     }
     setSending(false);
   };
@@ -62,6 +66,7 @@ export const AdvisorChat: React.FC<{ managerId: number; managerName: string }> =
       <p className="text-[11px] mb-3" style={{ color: 'var(--text-muted)' }}>
         Trả lời cho {managerName} dựa trên các số liệu ở trên (có thể nhắc tên cầu thủ trong câu hỏi). AI có thể nhầm, hãy đối chiếu với số liệu.
         {remaining !== null && limit !== null ? ` Còn ${remaining}/${limit} câu hôm nay.` : ' Mỗi người tối đa 10 câu mỗi ngày.'}
+        {' '}Câu hỏi được lưu ẩn danh (không kèm tên) trong 30 ngày để cải thiện trợ lý.
       </p>
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -75,9 +80,19 @@ export const AdvisorChat: React.FC<{ managerId: number; managerName: string }> =
         ))}
       </div>
 
+      {turns.length > 0 && (
+        <button onClick={() => { setTurns([]); setFresh(true); }} disabled={sending}
+          className="interactive mb-3 flex items-center gap-1 text-[11px] font-mono disabled:opacity-50" style={{ color: 'var(--text-muted)' }}>
+          <RotateCcw className="w-3 h-3" /> Hỏi lại từ đầu (trợ lý quên các câu trước)
+        </button>
+      )}
+
       {turns.map((t, i) => (
         <div key={i} className="mb-3">
           <p className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{t.question}</p>
+          {t.factsOnly && (
+            <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--accent-gold)' }}>Số liệu gốc — AI chưa diễn đạt chắc chắn nên không dùng lời của AI</p>
+          )}
           <p className="text-sm mt-1 whitespace-pre-wrap leading-relaxed rounded-xl p-3 border"
             style={{ color: t.failed ? 'var(--accent-tertiary)' : 'var(--text-main)', borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}>
             {t.answer}
