@@ -315,7 +315,9 @@ function handleAiChat_(params) {
     topics = routeQuestion_(lastQuestion);
     if (pool) mentioned = findMentionedPlayers_(pool, lastQuestion, ownedIds);
   }
-  if (!topics.length && !mentioned.length) topics = AI_DEFAULT_TOPICS.slice();
+  // Nothing recognised: send the everyday packs plus one line of chip state, so
+  // a question the keywords missed still gets the basic facts.
+  if (!topics.length && !mentioned.length) topics = AI_DEFAULT_TOPICS.concat(["chipsBrief"]);
 
   const facts = buildAiFacts_(d, topics, mentioned, question);
   const messages = [{ role: "system", content: AI_RULES + " Trả lời câu hỏi bằng tối đa khoảng 110 từ." }];

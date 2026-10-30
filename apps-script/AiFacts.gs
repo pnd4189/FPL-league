@@ -33,10 +33,45 @@ function hasTerm_(text, term) {
   return termPattern_(term).test(text);
 }
 
+/** Typos between two words; swapping two neighbouring letters ("captian") counts as one. */
+function editDistance_(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const d = [];
+  for (let i = 0; i <= a.length; i++) d[i] = [i];
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+  }
+  return d[a.length][b.length];
+}
+
+/**
+ * Misspelt English terms ("wilcard", "captian", "bench boots"): the words of
+ * the question that are within one typo of the term (two for 8+ letters), or
+ * []. Short abbreviations and Vietnamese words are never matched loosely.
+ */
+function fuzzyMatches_(plain, term) {
+  const target = term.replace(/ /g, "");
+  if (!/^[a-z ]+$/.test(term) || target.length < 5) return [];
+  const allowed = target.length >= 8 ? 2 : 1;
+  const words = plain.split(/[^a-z0-9]+/).filter(Boolean);
+  const found = [];
+  for (let i = 0; i < words.length; i++) {
+    if (editDistance_(words[i], target) <= allowed) found.push(words[i]);
+    else if (i + 1 < words.length && editDistance_(words[i] + words[i + 1], target) <= allowed) found.push(words[i] + " " + words[i + 1]);
+  }
+  return found;
+}
+
 /**
  * Topics a question is about; empty when nothing specific is asked. Chip names
  * are matched first and then removed, so "triple captain" is not also a
  * captain question and "free hit" not a points-hit (transfer) question.
+ * Typos are forgiven: "nên wilcard vòng nào" once fell through to the default
+ * packs and the model said it had no chip data.
  */
 function routeQuestion_(question) {
   let raw = String(question || "").toLowerCase();
@@ -45,14 +80,18 @@ function routeQuestion_(question) {
   const keys = ["chips"].concat(Object.keys(AI_TOPICS).filter(function (k) { return k !== "chips"; }));
   for (const key of keys) {
     const t = AI_TOPICS[key];
-    const anyHits = (t.any || []).filter(function (term) { return hasTerm_(raw, term) || hasTerm_(plain, normalizeText_(term)); });
+    const matched = [];
+    for (const term of (t.any || [])) {
+      if (hasTerm_(raw, term) || hasTerm_(plain, normalizeText_(term))) matched.push(normalizeText_(term));
+      else Array.prototype.push.apply(matched, fuzzyMatches_(plain, term));
+    }
     const accentHits = (t.accented || []).filter(function (term) { return hasTerm_(raw, term); });
-    if (!anyHits.length && !accentHits.length) continue;
+    if (!matched.length && !accentHits.length) continue;
     topics.push(key);
     if (key === "chips") {
-      for (const term of anyHits) {
-        raw = raw.replace(termPattern_(term), " ");
-        plain = plain.replace(termPattern_(normalizeText_(term)), " ");
+      for (const word of matched) {
+        raw = raw.replace(termPattern_(word), " ");
+        plain = plain.replace(termPattern_(word), " ");
       }
     }
   }
@@ -171,11 +210,32 @@ function chipsAskedAbout_(question) {
   });
 }
 
+/** One line of chip state, sent with questions that name no topic at all. */
+function chipBriefFacts_(d, pool, season, history) {
+  if (!season || !history) return "CHIP: chưa tải được dữ liệu chip.";
+  const rows = planChips_(pool, season, d.squad, d.gw, history.chips, { doubts: 0, swapGain: 0, swaps: 0, freeTransfers: 0 });
+  const now = rows.filter(function (r) { return r.state !== "later"; }).map(function (r) {
+    if (r.state === "used") return r.label + " đã dùng ở GW" + usedEventOf_(history.chips, r);
+    if (r.state === "expired") return r.label + " (GW" + r.start + "-" + r.stop + ") đã hết hạn";
+    return r.label + " còn dùng được tới GW" + r.stop;
+  });
+  const later = rows.filter(function (r) { return r.state === "later"; });
+  return "CHIP (tóm tắt; hỏi riêng về một chip để có gợi ý chi tiết): " + now.join("; ") +
+    (later.length ? "; các chip lượt sau mở từ GW" + later[0].start : "") + ".";
+}
+
+function usedEventOf_(chips, row) {
+  const hit = chips.filter(function (c) { return c.name === row.chip && c.event >= row.start && c.event <= row.stop; })[0];
+  return hit ? hit.event : "?";
+}
+
 function chipFacts_(d, pool, season, history, question) {
   if (!season || !history) return "CHIP: chưa tải được dữ liệu chip.";
   const doubts = d.health.filter(function (h) { return h.why !== "Không có trận vòng này"; }).length;
   const swapGain = d.transfers.reduce(function (sum, t) { return sum + Math.max(0, (t.ins[0] ? t.ins[0].ep5 : 0) - t.out.ep5); }, 0);
-  const rows = planChips_(pool, season, d.squad, d.gw, history.chips, { doubts: doubts, swapGain: swapGain });
+  const free = estimateFreeTransfers_(history.current, history.chips, d.savedTransfers).available;
+  const rows = planChips_(pool, season, d.squad, d.gw, history.chips,
+    { doubts: doubts, swapGain: swapGain, swaps: d.transfers.length, freeTransfers: free });
   const lines = [];
   // The model once read "Triple Captain: used in GW3" and still said one was
   // left, so a question about a named chip gets its answer stated up front.
@@ -254,7 +314,7 @@ function buildAiFacts_(d, topics, mentioned, question) {
   const state = getSeasonState();
   const pool = state ? getAdvisorPool_(state.nextGw, state.finishedGws) : null;
   const season = state ? getAdvisorSeason_(state.nextGw, state.finishedGws) : null;
-  const needsHistory = topics.indexOf("chips") !== -1 || topics.indexOf("transfers") !== -1;
+  const needsHistory = topics.indexOf("chips") !== -1 || topics.indexOf("chipsBrief") !== -1 || topics.indexOf("transfers") !== -1;
   const history = needsHistory ? getEntryHistory_(d.id, d.gw) : null;
 
   const parts = ["HLV " + d.manager + ", vòng sắp tới GW" + d.gw + ", tiền trong túi ước tính £" + d.bank +
@@ -264,6 +324,7 @@ function buildAiFacts_(d, topics, mentioned, question) {
   if (topics.indexOf("transfers") !== -1) parts.push(transferFacts_(d, history));
   if (topics.indexOf("health") !== -1) parts.push(healthFacts_(d));
   if (topics.indexOf("chips") !== -1 && pool) parts.push(chipFacts_(d, pool, season, history, question));
+  else if (topics.indexOf("chipsBrief") !== -1 && pool) parts.push(chipBriefFacts_(d, pool, season, history));
   if (topics.indexOf("league") !== -1 && state) parts.push(leagueFacts_(d.manager, state));
   if (mentioned.length && pool) {
     parts.push("CẦU THỦ ĐƯỢC HỎI:\n" + mentioned.map(function (id) {

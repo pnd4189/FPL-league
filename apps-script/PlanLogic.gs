@@ -38,7 +38,8 @@ function matchesIn_(season, team, w) {
  * @param {Array<{el:number, slot:number}>} squad
  * @param {number} gw the coming gameweek
  * @param {Array<{name: string, event: number}>} used chips already played
- * @param {{doubts: number, swapGain: number}} signals squad weakness for the Wildcard rule
+ * @param {{doubts: number, swapGain: number, swaps: number, freeTransfers: number}} signals for the Wildcard rule:
+ *   injured or doubtful members, expected-point gain and count of the suggested swaps, free transfers
  * @return {Array<Object>} one row per chip window, with a ready-made `advice` sentence
  */
 function planChips_(pool, season, squad, gw, used, signals) {
@@ -123,10 +124,21 @@ function adviseChip_(pool, season, rule, label, gw, starters, bench, clubs, sign
   }
 
   if (rule.name === "wildcard") {
+    // A Wildcard only beats free transfers when more changes are worth making
+    // than the free transfers cover (each extra one costs 4 points).
+    const gain = round1_(signals.swapGain);
+    const free = signals.freeTransfers;
+    if (signals.swaps <= free) {
+      return label + ": " + window + ". Chưa cần Wildcard: trợ lý gợi ý " + signals.swaps + " thay đổi, vừa đủ với " + free +
+        " lượt chuyển miễn phí (ước tính).";
+    }
     const worth = signals.doubts >= WILDCARD_MIN_DOUBTS || signals.swapGain >= WILDCARD_MIN_GAIN;
-    return label + ": " + window + ". Đội đang có " + signals.doubts + " cầu thủ chấn thương hoặc nghi ngờ; các gợi ý chuyển nhượng hàng đầu cộng lại thêm khoảng " +
-      round1_(signals.swapGain) + " điểm dự kiến trong 5 vòng. " +
-      (worth ? "Có thể cân nhắc Wildcard nếu số lượt chuyển miễn phí không đủ để sửa." : "Chưa cần Wildcard, dùng lượt chuyển miễn phí là đủ.");
+    if (worth) {
+      return label + ": " + window + ". Nên cân nhắc Wildcard ngay vòng này: trợ lý gợi ý " + signals.swaps + " thay đổi nhưng chỉ có " + free +
+        " lượt chuyển miễn phí (ước tính, mỗi lượt vượt trừ 4 điểm), trong khi các thay đổi đó thêm khoảng " + gain +
+        " điểm dự kiến trong 5 vòng; đội có " + signals.doubts + " cầu thủ chấn thương hoặc nghi ngờ.";
+    }
+    return label + ": " + window + ". Chưa cần Wildcard: các thay đổi gợi ý chỉ thêm khoảng " + gain + " điểm dự kiến trong 5 vòng.";
   }
 
   return label + ": " + window + ".";
