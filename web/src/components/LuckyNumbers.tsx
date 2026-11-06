@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Clover, Loader2, RefreshCw, TrendingUp } from 'lucide-react';
 import {
   analyzeLuckyNumbers,
   FrequencyEntry,
   isLuckyEligible,
+  latestScoredMatch,
   LuckyAnalysis,
 } from '../services/xsmbService';
 import { fetchH2HSchedule } from '../services/fplApi';
@@ -16,6 +17,9 @@ interface LuckyNumbersProps {
   /** Sends a question to the league chat; the question box shows only when this is given. */
   onAsk?: (question: string) => void;
 }
+
+// Matches the 5-minute cache the backend keeps on the H2H schedule.
+const REFRESH_AFTER_MS = 5 * 60 * 1000;
 
 // ─── Chart period options ────────────────────────────────────────────────────
 
@@ -256,42 +260,30 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
 
   const manager = INITIAL_PLAYERS.find((p) => p.id === managerId);
 
-  const load = useCallback(async () => {
+  const loadedAt = useRef(0);
+
+  const load = useCallback(async (force = false) => {
     if (!isLuckyEligible(managerId)) return;
     setLoading(true);
     setError('');
     try {
-      const schedule = await fetchH2HSchedule();
+      const schedule = await fetchH2HSchedule(force);
       if (!schedule) throw new Error('no_h2h');
 
-      const played = schedule
-        .filter(
-          (m) =>
-            m.played &&
-            (m.homeId === managerId || m.awayId === managerId),
-        )
-        .sort((a, b) => b.gw - a.gw);
-
-      if (!played.length) {
+      const latest = latestScoredMatch(schedule, managerId);
+      if (!latest) {
         setError('Chưa có kết quả H2H nào để phân tích.');
-        setLoading(false);
         return;
       }
 
-      const latest = played[0];
-      const isHome = latest.homeId === managerId;
-      const myScore = isHome ? latest.homePts : latest.awayPts;
-      const oppScore = isHome ? latest.awayPts : latest.homePts;
-      const oppId = isHome ? latest.awayId : latest.homeId;
       const oppName =
-        INITIAL_PLAYERS.find((p) => p.id === oppId)?.manager || 'Đối thủ';
-
+        INITIAL_PLAYERS.find((p) => p.id === latest.oppId)?.manager || 'Đối thủ';
+      const result = await analyzeLuckyNumbers(latest.mine, latest.opp);
       setH2hLabel(
-        `GW${latest.gw}: ${manager?.manager ?? '?'} ${myScore} – ${oppScore} ${oppName}`,
+        `GW${latest.gw}: ${manager?.manager ?? '?'} ${latest.mine} – ${latest.opp} ${oppName}`,
       );
-
-      const result = await analyzeLuckyNumbers(myScore, oppScore);
       setAnalysis(result);
+      loadedAt.current = Date.now();
     } catch (err) {
       console.warn('Lucky numbers error:', err);
       setError('Không thể tải dữ liệu. Thử lại sau.');
@@ -302,6 +294,17 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // A tab left open and brought back must show the newest H2H result, not the one it opened with.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - loadedAt.current > REFRESH_AFTER_MS) {
+        load();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [load]);
 
   if (!isLuckyEligible(managerId)) return null;
@@ -398,7 +401,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
         </div>
         <button
           type="button"
-          onClick={load}
+          onClick={() => load(true)}
           disabled={loading}
           className="pressable w-6 h-6 rounded-full flex items-center justify-center disabled:opacity-40"
           style={{

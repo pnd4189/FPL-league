@@ -44,13 +44,19 @@ function getXsmbRecent_() {
   return rows;
 }
 
-/** Latest played H2H match of a manager: gameweek, own score, opponent score and id. */
+/**
+ * Latest H2H match of a manager that has a real score: gameweek, own score, opponent score and id.
+ * A gameweek counts as played from its deadline, when it still reads 0-0, so such a match is
+ * skipped and the previous gameweek stays the latest result (same rule as the web card).
+ */
 function latestH2HScore_(managerId) {
   const schedule = getH2HSchedule();
   if (!schedule || schedule.status !== "success") return null;
   const id = String(managerId);
   const mine = schedule.data.matches
-    .filter(function (m) { return m.played && (String(m.homeId) === id || String(m.awayId) === id); })
+    .filter(function (m) {
+      return m.played && (m.homePts > 0 || m.awayPts > 0) && (String(m.homeId) === id || String(m.awayId) === id);
+    })
     .sort(function (a, b) { return b.gw - a.gw; });
   if (!mine.length) return null;
   const m = mine[0];

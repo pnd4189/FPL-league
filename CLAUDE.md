@@ -20,7 +20,7 @@ apps-script/        # 14 modular .gs files + manifest
   Advisor.gs         Round-assistant data: player/fixture pool, squads, endpoints
   Ai.gs              AI client: Mercury 3 (Inception, primary, reasoning medium) → Dahl Inference fallback, <think> stripping
   AiFacts.gs         Question routing (keywords → topics) + fact packs (captain, H2H, transfers, health, chips, league, players)
-  Lucky.gs           Lucky-number fact pack for Shark Lâm and Đại: latest H2H score digits + last 30 days of XSMB draws
+  Lucky.gs           Lucky-number fact pack for Shark Lâm and Đại: latest H2H score digits (a gameweek still at 0–0 is skipped; the web card refetches the schedule every 5 min and when the tab is shown again) + last 30 days of XSMB draws
   PlanLogic.gs       Chip timing, free-transfer estimate, transfer plan (hit rule), AI answer checking (pure logic)
   AiAdvisor.gs       AI comment per manager (written on demand when the numbers change) + league chat, memory, 30-day log
   DataProcessor.gs   Parse & write settled data to Google Sheet (26 tabs)

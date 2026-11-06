@@ -8,6 +8,8 @@
  * Only used by managers Shark Lâm (4403856) and Đại (1860254).
  */
 
+import type { H2HScheduleRow } from '../types';
+
 const XSMB_CSV_URL =
   'https://raw.githubusercontent.com/khiemdoan/vietnam-lottery-xsmb-analysis/refs/heads/main/data/xsmb-2-digits.csv';
 
@@ -16,6 +18,33 @@ export const LUCKY_MANAGER_IDS = [4403856, 1860254] as const;
 
 export function isLuckyEligible(managerId: number): boolean {
   return (LUCKY_MANAGER_IDS as readonly number[]).includes(managerId);
+}
+
+/**
+ * A manager's most recent H2H match that has a real score. The schedule marks a gameweek
+ * as played from its deadline, when it still reads 0–0, so a match nobody has scored in yet
+ * is skipped and the previous gameweek stays the latest result.
+ */
+export function latestScoredMatch(
+  schedule: H2HScheduleRow[],
+  managerId: number,
+): { gw: number; mine: number; opp: number; oppId: number } | null {
+  const latest = schedule
+    .filter(
+      (m) =>
+        m.played &&
+        (m.homePts > 0 || m.awayPts > 0) &&
+        (m.homeId === managerId || m.awayId === managerId),
+    )
+    .sort((a, b) => b.gw - a.gw)[0];
+  if (!latest) return null;
+  const isHome = latest.homeId === managerId;
+  return {
+    gw: latest.gw,
+    mine: isHome ? latest.homePts : latest.awayPts,
+    opp: isHome ? latest.awayPts : latest.homePts,
+    oppId: isHome ? latest.awayId : latest.homeId,
+  };
 }
 
 export interface XsmbDay {

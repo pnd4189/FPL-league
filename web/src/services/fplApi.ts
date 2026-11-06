@@ -340,23 +340,27 @@ export async function fetchSeasonInfo(): Promise<SeasonInfo | null> {
 
 /**
  * The league's real head-to-head schedule for the whole season (drawn once by
- * FPL), with points for gameweeks already played. Pairings never change, so
- * the result is memoised for the session.
+ * FPL), with points for gameweeks already played. Pairings never change but
+ * the points do, so the memo is dropped after the backend's own cache time
+ * (5 min); `force` skips it.
  */
+const SCHEDULE_MEMO_MS = 5 * 60 * 1000;
 let scheduleMemo: H2HScheduleRow[] | null = null;
+let scheduleMemoAt = 0;
 
-export async function fetchH2HSchedule(): Promise<H2HScheduleRow[] | null> {
-  if (scheduleMemo) return scheduleMemo;
+export async function fetchH2HSchedule(force = false): Promise<H2HScheduleRow[] | null> {
+  if (scheduleMemo && !force && Date.now() - scheduleMemoAt < SCHEDULE_MEMO_MS) return scheduleMemo;
   try {
     const json = await fetchJson(endpoint('h2h_schedule'), READ_TIMEOUT_MS);
     if (json.status === 'success' && Array.isArray(json.data?.matches)) {
       scheduleMemo = json.data.matches as H2HScheduleRow[];
+      scheduleMemoAt = Date.now();
       return scheduleMemo;
     }
-    return null;
+    return scheduleMemo;
   } catch (err) {
     console.warn('H2H schedule unavailable:', err);
-    return null;
+    return scheduleMemo;
   }
 }
 
