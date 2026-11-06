@@ -19,6 +19,10 @@
 
 const INCEPTION_BASE_URL = "https://api.inceptionlabs.ai/v1";
 const INCEPTION_MODEL = "mercury-3";
+// instant | low | medium | high. mercury-3 defaults to low when omitted.
+const INCEPTION_REASONING = "medium";
+// Reasoning tokens count inside max_completion_tokens, so the answer budget needs this much room on top.
+const INCEPTION_REASONING_TOKENS = 4000;
 
 // ─── Dahl Inference — Fallback ───────────────────────────────────────────────
 
@@ -106,9 +110,9 @@ function callMercury_(messages, opts) {
       payload: JSON.stringify({
         model: INCEPTION_MODEL,
         messages: messages,
-        max_completion_tokens: options.maxTokens || 1500,
+        max_completion_tokens: (options.maxTokens || 1500) + INCEPTION_REASONING_TOKENS,
         temperature: options.temperature === undefined ? 0.6 : options.temperature,
-        reasoning_effort: "none"
+        reasoning_effort: INCEPTION_REASONING
       })
     });
   } catch (e) {
@@ -148,6 +152,11 @@ function callAi_(messages, opts) {
   // 1. Try Mercury 3 (primary)
   const mercury = callMercury_(messages, options);
   if (mercury) return mercury; // either success or a definitive error (auth/quota)
+
+  // Mercury hung or failed late: a Dahl attempt would outlast the browser's wait.
+  if (getInceptionKey_() && options.startedAt && Date.now() - options.startedAt > AI_LATE_START_MS) {
+    return { ok: false, text: "", model: INCEPTION_MODEL, ms: 0, usage: null, error: "failed" };
+  }
 
   // 2. Fallback to Dahl
   if (!getAiKey_()) {
