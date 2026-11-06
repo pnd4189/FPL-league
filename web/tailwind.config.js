@@ -7,6 +7,11 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontSize: {
+        xs: ['0.8125rem', { lineHeight: '1.25rem' }],
+        sm: ['0.9375rem', { lineHeight: '1.4rem' }],
+        base: ['1.0625rem', { lineHeight: '1.65rem' }],
+      },
       colors: {
         epl: {
           ink: '#170b26',

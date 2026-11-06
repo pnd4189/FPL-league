@@ -57,7 +57,7 @@ export const HallOfFame: React.FC = () => (
             <div className="bezel-shell h-full flex">
               <div className="bezel-core w-full p-6 sm:p-7 flex flex-col items-center text-center">
                 <div
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-semibold mb-7"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[14px] font-mono font-semibold mb-7"
                   style={{
                     backgroundColor: 'var(--accent-gold-soft)',
                     color: 'var(--accent-gold)',
@@ -101,7 +101,7 @@ export const HallOfFame: React.FC = () => (
                   {champion.totalPoints !== null ? (
                     <>
                       <p
-                        className="text-[10px] font-mono uppercase tracking-[0.16em]"
+                        className="text-[13px] font-mono uppercase tracking-[0.16em]"
                         style={{ color: 'var(--text-faint)' }}
                       >
                         Tổng điểm cả mùa

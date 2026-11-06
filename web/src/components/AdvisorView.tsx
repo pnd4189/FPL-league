@@ -57,7 +57,7 @@ const readSavedManager = (): number => {
 const FixtureChips: React.FC<{ fixtures: AdvisorFixture[] }> = ({ fixtures }) => {
   if (!fixtures.length) {
     return (
-      <span className="text-[10px] font-mono font-medium" style={{ color: 'var(--accent-tertiary)' }}>
+      <span className="text-[13px] font-mono font-medium" style={{ color: 'var(--accent-tertiary)' }}>
         Trống lịch (Blank GW)
       </span>
     );
@@ -69,7 +69,7 @@ const FixtureChips: React.FC<{ fixtures: AdvisorFixture[] }> = ({ fixtures }) =>
         return (
           <span
             key={i}
-            className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded tabular-nums"
+            className="text-[13px] font-mono font-semibold px-1.5 py-0.5 rounded tabular-nums"
             style={{ backgroundColor: tone.bg, color: tone.fg }}
           >
             {f.opp} ({f.home ? 'H' : 'A'})
@@ -88,7 +88,7 @@ const PlayerLine: React.FC<{ p: AdvisorPlayer; showCost?: boolean }> = ({ p, sho
     <div className="min-w-0">
       <p className="text-sm font-semibold truncate font-display" style={{ color: 'var(--text-main)' }}>
         {p.name}{' '}
-        <span className="text-[10px] font-mono font-normal" style={{ color: 'var(--text-faint)' }}>
+        <span className="text-[13px] font-mono font-normal" style={{ color: 'var(--text-faint)' }}>
           {p.team} · {POS_SHORT[p.pos]}
         </span>
       </p>
@@ -96,7 +96,7 @@ const PlayerLine: React.FC<{ p: AdvisorPlayer; showCost?: boolean }> = ({ p, sho
         <FixtureChips fixtures={p.fixtures} />
       </div>
       {p.reasons && p.reasons.length > 0 && (
-        <p className="text-[11px] mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-[14px] mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>
           {p.reasons.join(' · ')}
         </p>
       )}
@@ -104,11 +104,11 @@ const PlayerLine: React.FC<{ p: AdvisorPlayer; showCost?: boolean }> = ({ p, sho
     <div className="text-right flex-shrink-0 tabular-nums">
       <p className="text-sm font-mono font-bold" style={{ color: 'var(--accent-primary)' }}>
         {p.ep.toFixed(1)}{' '}
-        <span className="text-[10px] font-normal" style={{ color: 'var(--text-faint)' }}>
+        <span className="text-[13px] font-normal" style={{ color: 'var(--text-faint)' }}>
           xPts
         </span>
       </p>
-      <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
+      <p className="text-[13px] font-mono" style={{ color: 'var(--text-muted)' }}>
         Form {p.form.toFixed(1)}
         {showCost ? ` · £${p.cost.toFixed(1)}m` : ''}
         {p.ep5 !== undefined && showCost ? ` · 5GW ${p.ep5.toFixed(1)}đ` : ''}
@@ -348,7 +348,7 @@ export const AdvisorView: React.FC<AdvisorViewProps> = ({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-semibold font-display">{h.name}</span>
-                        <span className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                        <span className="text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
                           {h.team} · {h.starter ? 'Đá chính' : 'Dự bị'}
                         </span>
                       </div>
@@ -393,7 +393,7 @@ export const AdvisorView: React.FC<AdvisorViewProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="surface-well p-4">
-                    <p className="text-[11px] font-mono font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-primary)' }}>
+                    <p className="text-[14px] font-mono font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-primary)' }}>
                       Quân bài tạo khác biệt của bạn
                     </p>
                     {advice.opponent.edge.length ? (
@@ -405,7 +405,7 @@ export const AdvisorView: React.FC<AdvisorViewProps> = ({
                     )}
                   </div>
                   <div className="surface-well p-4">
-                    <p className="text-[11px] font-mono font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-tertiary)' }}>
+                    <p className="text-[14px] font-mono font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-tertiary)' }}>
                       Mối đe dọa từ đối thủ
                     </p>
                     {advice.opponent.threat.length ? (
@@ -440,11 +440,11 @@ export const AdvisorView: React.FC<AdvisorViewProps> = ({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {advice.transfers.map(t => (
                   <div key={t.out.id} className="surface-well p-4">
-                    <p className="text-[10px] font-mono font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--accent-tertiary)' }}>
+                    <p className="text-[13px] font-mono font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--accent-tertiary)' }}>
                       Cân nhắc bán ra
                     </p>
                     <PlayerLine p={{ ...t.out, difficulty: t.outDifficulty }} showCost />
-                    <p className="text-[10px] font-mono font-semibold uppercase tracking-wider mt-3 mb-1" style={{ color: 'var(--accent-primary)' }}>
+                    <p className="text-[13px] font-mono font-semibold uppercase tracking-wider mt-3 mb-1" style={{ color: 'var(--accent-primary)' }}>
                       Mục tiêu mua thay thế
                     </p>
                     {t.ins.map(p => (

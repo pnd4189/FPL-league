@@ -75,7 +75,7 @@ const FrequencyChart: React.FC<{
       {/* Chart header: title + period toggle */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p
-          className="text-[10px] font-mono uppercase tracking-[0.12em] px-0.5"
+          className="text-[13px] font-mono uppercase tracking-[0.12em] px-0.5"
           style={{ color: 'var(--text-faint)' }}
         >
           Biểu đồ tần suất xuất hiện
@@ -96,7 +96,7 @@ const FrequencyChart: React.FC<{
                 key={opt.key}
                 type="button"
                 onClick={() => setPeriod(opt.key)}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold transition-all duration-200 ${
+                className={`px-2.5 py-1 rounded-full text-[13px] font-mono font-semibold transition-all duration-200 ${
                   active ? '' : 'hover:opacity-80'
                 }`}
                 style={{
@@ -136,7 +136,7 @@ const FrequencyChart: React.FC<{
               >
                 {/* Number pill */}
                 <span
-                  className={`${compact ? 'text-[10px] min-w-[26px]' : 'text-[11px] min-w-[30px]'} font-mono font-bold text-center px-1 py-0.5 rounded-md flex-shrink-0`}
+                  className={`${compact ? 'text-[13px] min-w-[26px]' : 'text-[14px] min-w-[30px]'} font-mono font-bold text-center px-1 py-0.5 rounded-md flex-shrink-0`}
                   style={{
                     backgroundColor: isSeed ? `${color}18` : 'transparent',
                     color: isSeed ? color : 'var(--text-main)',
@@ -190,7 +190,7 @@ const FrequencyChart: React.FC<{
 
                 {/* Count badge */}
                 <span
-                  className={`${compact ? 'text-[10px] min-w-[18px]' : 'text-[11px] min-w-[22px]'} font-mono font-bold text-center flex-shrink-0 tabular-nums`}
+                  className={`${compact ? 'text-[13px] min-w-[18px]' : 'text-[14px] min-w-[22px]'} font-mono font-bold text-center flex-shrink-0 tabular-nums`}
                   style={{
                     color: count > 0 ? color : 'var(--text-faint)',
                   }}
@@ -211,7 +211,7 @@ const FrequencyChart: React.FC<{
           }}
         >
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+            <span className="flex items-center gap-1.5 text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
               <span
                 className="w-3 h-2.5 rounded-sm"
                 style={{
@@ -221,7 +221,7 @@ const FrequencyChart: React.FC<{
               />
               Seed H2H
             </span>
-            <span className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+            <span className="flex items-center gap-1.5 text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
               <span
                 className="w-3 h-2.5 rounded-sm"
                 style={{
@@ -232,7 +232,7 @@ const FrequencyChart: React.FC<{
               Liên quan
             </span>
           </div>
-          <span className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+          <span className="text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
             Xếp giảm dần theo số lần xuất hiện
           </span>
         </div>
@@ -388,7 +388,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
             </h4>
             {h2hLabel && (
               <p
-                className="text-[10px] font-mono truncate"
+                className="text-[13px] font-mono truncate"
                 style={{ color: 'var(--text-muted)' }}
               >
                 {h2hLabel}
@@ -476,7 +476,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
                   style={{ color: 'var(--text-faint)' }}
                 />
                 <span
-                  className="text-[10px] font-mono"
+                  className="text-[13px] font-mono"
                   style={{ color: 'var(--text-faint)' }}
                 >
                   H2H seed
@@ -493,7 +493,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
               ].map((item) => (
                 <span
                   key={item.label}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[13px] font-mono"
                   style={{
                     backgroundColor: item.hit
                       ? 'var(--accent-primary-soft)'
@@ -520,7 +520,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
             {/* Frequency table */}
             <div>
               <p
-                className="text-[10px] font-mono uppercase tracking-[0.12em] mb-1.5 px-0.5"
+                className="text-[13px] font-mono uppercase tracking-[0.12em] mb-1.5 px-0.5"
                 style={{ color: 'var(--text-faint)' }}
               >
                 Bảng tần suất xuất hiện — XSMB 2 số cuối
@@ -530,7 +530,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
                 style={{ boxShadow: '0 0 0 1px var(--border-subtle)' }}
               >
                 <div className="overflow-x-auto">
-                  <table className="w-full text-[11px]">
+                  <table className="w-full text-[14px]">
                     <thead>
                       <tr style={{ backgroundColor: 'var(--table-head-bg)' }}>
                         <th
@@ -566,10 +566,10 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
                   className={`${compact ? 'px-2.5 py-1.5' : 'px-3.5 py-2'} border-t space-y-0.5`}
                   style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card)' }}
                 >
-                  <p className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                  <p className="text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
                     Tần suất xuất hiện = số lần con số xuất hiện trong kết quả XSMB (2 số cuối các giải).
                   </p>
-                  <p className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                  <p className="text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
                     Các mốc thời gian được tính ngược từ ngày bạn mở trang web ({new Date().toLocaleDateString('vi-VN')}).
                   </p>
                 </div>
@@ -585,7 +585,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
 
             {/* Data range footer */}
             <p
-              className="text-[10px] font-mono text-center"
+              className="text-[13px] font-mono text-center"
               style={{ color: 'var(--text-faint)' }}
             >
               Dữ liệu XSMB: {analysis.dataFrom} → {analysis.dataTo} ({analysis.totalDays} ngày)

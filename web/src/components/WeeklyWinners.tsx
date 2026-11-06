@@ -114,7 +114,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
 
             <div className="surface-well px-4 py-3 flex items-center gap-3.5 flex-shrink-0">
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest font-mono" style={{ color: 'var(--text-faint)' }}>
+                <p className="text-[13px] uppercase tracking-widest font-mono" style={{ color: 'var(--text-faint)' }}>
                   Đã ghi nhận
                 </p>
                 <p className="text-base sm:text-lg font-bold font-mono tabular-nums" style={{ color: 'var(--accent-primary)' }}>
@@ -158,7 +158,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                   </h4>
                   {isLive && selectedGW === activeGWNumber && (
                     <span
-                      className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider"
+                      className="px-2 py-0.5 rounded-full text-[13px] font-mono font-bold uppercase tracking-wider"
                       style={{
                         backgroundColor: 'var(--accent-tertiary-soft)',
                         color: 'var(--accent-tertiary)',
@@ -169,7 +169,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                     </span>
                   )}
                   <span
-                    className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold tabular-nums"
+                    className="px-2.5 py-0.5 rounded-full text-[13px] font-mono font-semibold tabular-nums"
                     style={{
                       backgroundColor: 'var(--accent-primary-soft)',
                       color: 'var(--accent-primary)',
@@ -223,7 +223,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
               {isTie ? (
                 <div className="space-y-3">
                   <div
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold tabular-nums"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[14px] font-mono font-semibold tabular-nums"
                     style={{
                       backgroundColor: 'var(--accent-gold-soft)',
                       color: 'var(--accent-gold)',
@@ -254,7 +254,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                           />
                           <div className="min-w-0">
                             <span
-                              className="inline-block text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                              className="inline-block text-[13px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
                               style={{ backgroundColor: 'var(--accent-gold-soft)', color: 'var(--accent-gold)' }}
                             >
                               Đồng nhất vòng
@@ -270,7 +270,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                           <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums" style={{ color: 'var(--accent-primary)' }}>
                             {winner.points} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>pts</span>
                           </p>
-                          <span className="text-[11px] font-mono font-semibold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
+                          <span className="text-[14px] font-mono font-semibold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
                             +{prizePerWinner.toLocaleString('vi-VN')}đ
                           </span>
                         </div>
@@ -295,7 +295,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                     />
                     <div className="min-w-0">
                       <span
-                        className="inline-block text-[10px] font-mono font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+                        className="inline-block text-[13px] font-mono font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
                         style={{ backgroundColor: 'var(--accent-gold-soft)', color: 'var(--accent-gold)' }}
                       >
                         Dẫn đầu vòng · 50.000đ
@@ -326,7 +326,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
               style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
             >
               <div
-                className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[10px] font-mono"
+                className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
                 style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
               >
                 <span>Bảng điểm Gameweek {selectedGW}</span>
@@ -334,7 +334,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
               </div>
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
-                  className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider border-b"
+                  className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"
                   style={{
                     backgroundColor: 'var(--table-head-bg)',
                     borderColor: 'var(--border-subtle)',
@@ -414,7 +414,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                               <p className="font-semibold truncate text-xs sm:text-sm font-display" style={{ color: 'var(--text-main)' }}>
                                 {p.manager}
                               </p>
-                              <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                              <p className="text-[13px] truncate" style={{ color: 'var(--text-muted)' }}>
                                 {p.team}
                               </p>
                             </div>
@@ -429,7 +429,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                             const cell = (
                               <span className="cursor-help">
                                 {p.hasPlayed ? p.points : '-'}{' '}
-                                <span className="text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>
+                                <span className="text-[13px] font-normal" style={{ color: 'var(--text-muted)' }}>
                                   pts
                                 </span>
                               </span>
@@ -455,7 +455,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                             return (
                               <span className="inline-flex items-center gap-1.5 min-w-0">
                                 <span
-                                  className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+                                  className="text-[12px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
                                   style={{
                                     backgroundColor: cap.mult === 3 ? 'var(--accent-secondary-soft)' : 'var(--accent-tertiary-soft)',
                                     color: cap.mult === 3 ? 'var(--accent-secondary)' : 'var(--accent-tertiary)',
@@ -466,7 +466,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                                 <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>
                                   {cap.name}
                                 </span>
-                                <span className="text-[10px] font-mono flex-shrink-0" style={{ color: 'var(--text-faint)' }}>
+                                <span className="text-[13px] font-mono flex-shrink-0" style={{ color: 'var(--text-faint)' }}>
                                   {cap.team}
                                 </span>
                               </span>
@@ -542,7 +542,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                         style={{ borderColor: 'var(--border-subtle)' }}
                       >
                         <div
-                          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold tabular-nums"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-semibold tabular-nums"
                           style={{ backgroundColor: 'var(--bg-card-solid)', color: 'var(--text-main)' }}
                         >
                           <span
@@ -567,7 +567,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                               </p>
                               {liveInfo && (
                                 <span
-                                  className="flex-shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider"
+                                  className="flex-shrink-0 px-1.5 py-0.5 rounded-full text-[12px] font-mono font-bold uppercase tracking-wider"
                                   style={{
                                     backgroundColor: 'var(--accent-tertiary-soft)',
                                     color: 'var(--accent-tertiary)',
@@ -598,7 +598,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                             <p className="text-xs font-semibold font-display" style={{ color: 'var(--text-main)' }}>
                               Chưa khởi tranh
                             </p>
-                            <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+                            <p className="text-[14px]" style={{ color: 'var(--text-faint)' }}>
                               Chờ kết quả Gameweek {w.gw}
                             </p>
                           </div>
@@ -607,7 +607,7 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
                     </div>
 
                     <div
-                      className="mt-3.5 pt-2.5 border-t flex items-center justify-between text-[10px] font-mono"
+                      className="mt-3.5 pt-2.5 border-t flex items-center justify-between text-[13px] font-mono"
                       style={{ borderColor: 'var(--border-subtle)' }}
                     >
                       <span style={{ color: 'var(--text-faint)' }}>Thanh toán</span>

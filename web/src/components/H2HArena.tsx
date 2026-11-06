@@ -155,7 +155,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                 </h4>
                 {showingLive && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[13px] font-mono font-semibold"
                     style={{
                       backgroundColor: 'var(--accent-tertiary-soft)',
                       color: 'var(--accent-tertiary)',
@@ -231,7 +231,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                   return (
                     <div key={idx} className="surface-well surface-well-hover p-4">
                       <div
-                        className="text-[10px] font-mono mb-3 flex items-center justify-between"
+                        className="text-[13px] font-mono mb-3 flex items-center justify-between"
                         style={{ color: 'var(--text-faint)' }}
                       >
                         <span>CẶP {String(idx + 1).padStart(2, '0')}</span>
@@ -263,7 +263,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                             >
                               {m.homePlayer}
                             </p>
-                            <p className="text-[10px] truncate" style={{ color: 'var(--text-faint)' }}>
+                            <p className="text-[13px] truncate" style={{ color: 'var(--text-faint)' }}>
                               {m.homeTeam}
                             </p>
                           </div>
@@ -284,7 +284,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
 
                       <div className="my-1.5 flex items-center gap-2">
                         <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-subtle)' }} />
-                        <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>
+                        <span className="text-[12px] font-mono uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>
                           vs
                         </span>
                         <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-subtle)' }} />
@@ -309,7 +309,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                             >
                               {m.awayPlayer}
                             </p>
-                            <p className="text-[10px] truncate" style={{ color: 'var(--text-faint)' }}>
+                            <p className="text-[13px] truncate" style={{ color: 'var(--text-faint)' }}>
                               {m.awayTeam}
                             </p>
                           </div>
@@ -351,11 +351,11 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                 <h4 className="text-sm font-display font-bold" style={{ color: 'var(--text-main)' }}>
                   Bảng xếp hạng H2H toàn mùa
                 </h4>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-[14px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   Xếp theo luật chính thức của FPL: Điểm H2H trước, tổng điểm Classic sau.
                 </p>
               </div>
-              <span className="md:hidden inline-flex items-center gap-1 text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+              <span className="md:hidden inline-flex items-center gap-1 text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
                 <ArrowLeftRight className="w-3 h-3" strokeWidth={1.5} />
                 Vuốt ngang
               </span>
@@ -364,7 +364,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
             <div className="overflow-x-auto max-h-[620px] touch-scroll">
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
-                  className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider"
+                  className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider"
                   style={{
                     backgroundColor: 'var(--table-head-bg)',
                     borderBottom: '1px solid var(--border-subtle)',
@@ -466,7 +466,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                               >
                                 {p.manager}
                               </p>
-                              <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                              <p className="text-[13px] truncate" style={{ color: 'var(--text-muted)' }}>
                                 {p.team}
                               </p>
                             </div>

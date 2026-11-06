@@ -24,10 +24,10 @@
     --border-highlight: rgba(4, 120, 87, 0.28);
     --inner-highlight: rgba(255, 255, 255, 0.96);
 
-    --text-main: #170b26;
-    --text-secondary: #352749;
-    --text-muted: #615676;
-    --text-faint: #8c82a0;
+    --text-main: #140820;
+    --text-secondary: #2a1f3d;
+    --text-muted: #4a3f63;
+    --text-faint: #6b6182;
 
     --accent-primary: #03855a;
     --accent-primary-ink: #ffffff;
@@ -68,10 +68,10 @@
     --border-highlight: rgba(52, 211, 153, 0.36);
     --inner-highlight: rgba(255, 255, 255, 0.11);
 
-    --text-main: #f8f7fc;
-    --text-secondary: #dedaf0;
-    --text-muted: #b0a8cc;
-    --text-faint: #837aa3;
+    --text-main: #ffffff;
+    --text-secondary: #ece9f7;
+    --text-muted: #cbc4e2;
+    --text-faint: #a9a1c7;
 
     --accent-primary: #34d399;
     --accent-primary-ink: #06281e;
@@ -354,26 +354,12 @@
   }
 }
 
-/* Pitch motifs in the background. Transform only; the reduced-motion rule above stops them. */
-.fpl-ball {
-  animation: fpl-ball-spin 36s linear infinite, fpl-ball-float 9s ease-in-out infinite;
-  will-change: transform;
-}
-
+/* Grass in the background. Transform only; the reduced-motion rule above stops it. */
 .fpl-blade {
   transform-box: fill-box;
   transform-origin: 50% 100%;
   animation: fpl-sway 4.2s ease-in-out infinite;
   will-change: transform;
-}
-
-@keyframes fpl-ball-spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes fpl-ball-float {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -14px; }
 }
 
 @keyframes fpl-sway {

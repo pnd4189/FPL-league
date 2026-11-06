@@ -43,7 +43,7 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
                 </span>
                 {isLive && (
                   <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[13px] font-mono font-semibold"
                     style={{
                       backgroundColor: 'var(--accent-tertiary-soft)',
                       color: 'var(--accent-tertiary)',
@@ -96,7 +96,7 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
         <div className="bezel-shell">
           <div className="bezel-core overflow-hidden">
             <div
-              className="md:hidden flex items-center justify-between px-4 py-2 text-[10px] font-mono"
+              className="md:hidden flex items-center justify-between px-4 py-2 text-[13px] font-mono"
               style={{
                 borderBottom: '1px solid var(--border-subtle)',
                 color: 'var(--text-muted)',
@@ -112,7 +112,7 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
             <div className="overflow-x-auto max-h-[640px] touch-scroll">
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
-                  className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider"
+                  className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider"
                   style={{
                     backgroundColor: 'var(--table-head-bg)',
                     borderBottom: '1px solid var(--border-subtle)',
@@ -241,7 +241,7 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
                               >
                                 {p.manager}
                               </p>
-                              <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                              <p className="text-[13px] truncate" style={{ color: 'var(--text-muted)' }}>
                                 {p.team}
                               </p>
                             </div>
@@ -303,7 +303,7 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
                           return (
                             <td
                               key={gw}
-                              className="py-3 px-2 text-center font-mono text-[11px]"
+                              className="py-3 px-2 text-center font-mono text-[14px]"
                               style={{
                                 color:
                                   pts === null

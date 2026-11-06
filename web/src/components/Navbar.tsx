@@ -122,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="leading-none">
                   <span
-                    className="block text-[9px] font-mono uppercase tracking-[0.18em] font-semibold"
+                    className="block text-[12px] font-mono uppercase tracking-[0.18em] font-semibold"
                     style={{ color: 'var(--text-muted)' }}
                   >
                     FPL 26/27
@@ -251,7 +251,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   title={lastUpdated ? `Cập nhật gần nhất: ${lastUpdated}` : 'Đồng bộ dữ liệu mới nhất'}
                 >
                   <span
-                    className="hidden sm:inline text-[11px] font-semibold"
+                    className="hidden sm:inline text-[14px] font-semibold"
                     style={{ color: syncNotice ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
                   >
                     {isSyncing ? 'Đang tải' : syncNotice || 'Làm mới'}
@@ -366,7 +366,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-main)' }}>
                           {item.label}
                         </p>
-                        <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                        <p className="text-[14px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
                           {item.desc}
                         </p>
                       </div>
@@ -435,7 +435,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     strokeWidth={1.5}
                     style={{ color: isActive ? 'var(--accent-brand-spark)' : 'var(--text-muted)' }}
                   />
-                  <span className="text-[10px] font-semibold mt-0.5 tracking-tight">
+                  <span className="text-[13px] font-semibold mt-0.5 tracking-tight">
                     {item.shortLabel}
                   </span>
                 </button>

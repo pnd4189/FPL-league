@@ -105,7 +105,7 @@ export const ManagerModal: React.FC<ManagerModalProps> = ({
           {/* Dual Standings Summary */}
           <div className="grid grid-cols-2 gap-3 my-5">
             <div className="surface-well p-4">
-              <div className="flex items-center gap-1.5 text-[11px] font-mono mb-1.5" style={{ color: 'var(--text-muted)' }}>
+              <div className="flex items-center gap-1.5 text-[14px] font-mono mb-1.5" style={{ color: 'var(--text-muted)' }}>
                 <Trophy className="w-3.5 h-3.5" strokeWidth={1.5} style={{ color: 'var(--accent-gold)' }} />
                 <span>Classic League</span>
               </div>
@@ -115,13 +115,13 @@ export const ManagerModal: React.FC<ManagerModalProps> = ({
                   ({classic?.total || 0} pts)
                 </span>
               </p>
-              <p className="text-[10px] mt-1 font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
+              <p className="text-[13px] mt-1 font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
                 TB {classic?.average || 0} · Cao nhất {classic?.bestGW?.pts || 0}
               </p>
             </div>
 
             <div className="surface-well p-4">
-              <div className="flex items-center gap-1.5 text-[11px] font-mono mb-1.5" style={{ color: 'var(--text-muted)' }}>
+              <div className="flex items-center gap-1.5 text-[14px] font-mono mb-1.5" style={{ color: 'var(--text-muted)' }}>
                 <Swords className="w-3.5 h-3.5" strokeWidth={1.5} style={{ color: 'var(--accent-secondary)' }} />
                 <span>H2H League</span>
               </div>
@@ -131,7 +131,7 @@ export const ManagerModal: React.FC<ManagerModalProps> = ({
                   ({h2h?.points || 0} Pts)
                 </span>
               </p>
-              <p className="text-[10px] mt-1 font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
+              <p className="text-[13px] mt-1 font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
                 {h2h?.won || 0}T {h2h?.drawn || 0}H {h2h?.lost || 0}B · GD {h2h?.goalDifference || 0}
               </p>
             </div>

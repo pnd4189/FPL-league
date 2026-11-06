@@ -320,7 +320,7 @@ export const App: React.FC = () => {
       {(initialAutoSyncing || isLiveNow || isOffline) && (
         <div className="relative z-20 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-3 flex justify-center">
           <div
-            className="surface-well inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-[11px] font-mono font-medium tabular-nums"
+            className="surface-well inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-[14px] font-mono font-medium tabular-nums"
             style={{
               color: isOffline ? 'var(--accent-tertiary)' : 'var(--accent-primary)',
             }}

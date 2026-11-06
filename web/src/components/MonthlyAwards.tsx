@@ -232,7 +232,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
             <div className="surface-well px-4 py-3 flex items-center gap-3 flex-shrink-0">
               <Award className="w-4 h-4" strokeWidth={1.5} style={{ color: 'var(--accent-gold)' }} />
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest font-mono" style={{ color: 'var(--text-faint)' }}>
+                <p className="text-[13px] uppercase tracking-widest font-mono" style={{ color: 'var(--text-faint)' }}>
                   Định mức mỗi tháng
                 </p>
                 <p className="text-sm sm:text-base font-bold font-mono tabular-nums" style={{ color: 'var(--accent-gold)' }}>
@@ -276,7 +276,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                     }
                   >
                     {m.name}{' '}
-                    <span className="text-[10px] opacity-75 font-normal">({m.range})</span>
+                    <span className="text-[13px] opacity-75 font-normal">({m.range})</span>
                   </button>
                 );
               })}
@@ -355,7 +355,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                   {isClassicTie ? (
                     <div className="space-y-3">
                       <div
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold tabular-nums"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[14px] font-mono font-semibold tabular-nums"
                         style={{
                           backgroundColor: 'var(--accent-gold-soft)',
                           color: 'var(--accent-gold)',
@@ -384,7 +384,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                               />
                               <div className="min-w-0">
                                 <span
-                                  className="inline-block text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                                  className="inline-block text-[13px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
                                   style={{ backgroundColor: 'var(--accent-primary-soft)', color: 'var(--accent-primary)' }}
                                 >
                                   Đồng nhất Classic
@@ -400,7 +400,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                               <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums" style={{ color: 'var(--accent-primary)' }}>
                                 {winner.monthTotal} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>pts</span>
                               </p>
-                              <span className="text-[11px] font-mono font-semibold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
+                              <span className="text-[14px] font-mono font-semibold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
                                 +{classicPrizeEach.toLocaleString('vi-VN')}đ
                               </span>
                             </div>
@@ -425,7 +425,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                         />
                         <div className="min-w-0">
                           <span
-                            className="inline-block text-[10px] font-mono font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+                            className="inline-block text-[13px] font-mono font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
                             style={{ backgroundColor: 'var(--accent-primary-soft)', color: 'var(--accent-primary)' }}
                           >
                             Dẫn đầu Classic {selectedMonthName}
@@ -456,7 +456,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                   style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
                 >
                   <div
-                    className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[10px] font-mono"
+                    className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
                     style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
                   >
                     <span>Classic {selectedMonthName}</span>
@@ -464,7 +464,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                   </div>
                   <table className="w-full border-collapse text-left text-xs tabular-nums">
                     <thead
-                      className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider border-b"
+                      className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"
                       style={{
                         backgroundColor: 'var(--table-head-bg)',
                         borderColor: 'var(--border-subtle)',
@@ -553,7 +553,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                                   <p className="font-semibold truncate text-xs sm:text-sm font-display" style={{ color: 'var(--text-main)' }}>
                                     {p.manager}
                                   </p>
-                                  <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                                  <p className="text-[13px] truncate" style={{ color: 'var(--text-muted)' }}>
                                     {p.team}
                                   </p>
                                 </div>
@@ -583,7 +583,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                               style={{ color: 'var(--accent-primary)', backgroundColor: 'var(--accent-primary-soft)' }}
                             >
                               {p.playedCount > 0 ? p.monthTotal : '-'}{' '}
-                              <span className="text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>
+                              <span className="text-[13px] font-normal" style={{ color: 'var(--text-muted)' }}>
                                 pts
                               </span>
                             </td>
@@ -631,7 +631,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                   {isH2HTie ? (
                     <div className="space-y-3">
                       <div
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold tabular-nums"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[14px] font-mono font-semibold tabular-nums"
                         style={{
                           backgroundColor: 'var(--accent-gold-soft)',
                           color: 'var(--accent-gold)',
@@ -660,7 +660,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                               />
                               <div className="min-w-0">
                                 <span
-                                  className="inline-block text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                                  className="inline-block text-[13px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
                                   style={{ backgroundColor: 'var(--accent-secondary-soft)', color: 'var(--accent-secondary)' }}
                                 >
                                   Đồng nhất H2H
@@ -676,7 +676,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                               <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums" style={{ color: 'var(--accent-secondary)' }}>
                                 {winner.h2hPts} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>Pts</span>
                               </p>
-                              <span className="text-[11px] font-mono font-semibold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
+                              <span className="text-[14px] font-mono font-semibold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
                                 +{h2hPrizeEach.toLocaleString('vi-VN')}đ
                               </span>
                             </div>
@@ -701,7 +701,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                         />
                         <div className="min-w-0">
                           <span
-                            className="inline-block text-[10px] font-mono font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+                            className="inline-block text-[13px] font-mono font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
                             style={{ backgroundColor: 'var(--accent-secondary-soft)', color: 'var(--accent-secondary)' }}
                           >
                             Dẫn đầu H2H {selectedMonthName}
@@ -718,7 +718,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                           {h2hMonthlyRankings[0]?.h2hPts || 0}{' '}
                           <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>Pts</span>
                         </p>
-                        <p className="text-[11px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                        <p className="text-[14px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
                           GD: {h2hMonthlyRankings[0]?.gd > 0 ? `+${h2hMonthlyRankings[0]?.gd}` : h2hMonthlyRankings[0]?.gd || 0}
                         </p>
                         <span className="text-xs font-mono font-semibold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
@@ -735,7 +735,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                   style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
                 >
                   <div
-                    className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[10px] font-mono"
+                    className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
                     style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
                   >
                     <span>H2H {selectedMonthName}</span>
@@ -743,7 +743,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                   </div>
                   <table className="w-full border-collapse text-left text-xs tabular-nums">
                     <thead
-                      className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider border-b"
+                      className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"
                       style={{
                         backgroundColor: 'var(--table-head-bg)',
                         borderColor: 'var(--border-subtle)',
@@ -848,7 +848,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                                   <p className="font-semibold truncate text-xs sm:text-sm font-display" style={{ color: 'var(--text-main)' }}>
                                     {p.manager}
                                   </p>
-                                  <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                                  <p className="text-[13px] truncate" style={{ color: 'var(--text-muted)' }}>
                                     {p.team}
                                   </p>
                                 </div>
@@ -856,7 +856,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                             </td>
 
                             {p.gwResults.map(gr => (
-                              <td key={gr.gw} className="py-3 px-2 text-center font-mono text-[10px]">
+                              <td key={gr.gw} className="py-3 px-2 text-center font-mono text-[13px]">
                                 {gr.result !== '-' ? (
                                   <span
                                     className="inline-block px-2 py-0.5 rounded-full font-semibold"
@@ -980,7 +980,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                         {m.monthName}
                       </h5>
                       <span
-                        className="px-2.5 py-0.5 rounded-full text-[10px] font-mono tabular-nums"
+                        className="px-2.5 py-0.5 rounded-full text-[13px] font-mono tabular-nums"
                         style={{ backgroundColor: 'var(--bg-card-solid)', color: 'var(--text-muted)' }}
                       >
                         {m.gwRange}
@@ -999,12 +999,12 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                       <div>
                         <div className="flex items-center justify-between mb-2.5">
                           <span
-                            className="text-[10px] font-mono font-semibold uppercase tracking-wider flex items-center gap-1"
+                            className="text-[13px] font-mono font-semibold uppercase tracking-wider flex items-center gap-1"
                             style={{ color: 'var(--accent-primary)' }}
                           >
                             <Trophy className="w-3 h-3" strokeWidth={1.6} /> Classic
                           </span>
-                          <span className="text-[11px] font-mono font-bold tabular-nums" style={{ color: 'var(--accent-primary)' }}>
+                          <span className="text-[14px] font-mono font-bold tabular-nums" style={{ color: 'var(--accent-primary)' }}>
                             100.000đ
                           </span>
                         </div>
@@ -1014,7 +1014,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                             <p className="text-xs font-semibold truncate font-display" style={{ color: 'var(--text-main)' }}>
                               {m.classicWinner}
                             </p>
-                            <p className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                            <p className="text-[13px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
                               {m.classicPoints > 0 ? `${m.classicPoints} pts` : 'Chờ hoàn thành'}
                             </p>
                           </div>
@@ -1022,7 +1022,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                       </div>
 
                       <div
-                        className="mt-2.5 pt-2 border-t text-[10px] font-mono flex items-center gap-1"
+                        className="mt-2.5 pt-2 border-t text-[13px] font-mono flex items-center gap-1"
                         style={{ borderColor: 'var(--border-subtle)', color: m.paidClassic ? 'var(--accent-primary)' : 'var(--text-faint)' }}
                       >
                         {m.paidClassic ? (
@@ -1041,12 +1041,12 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                       <div>
                         <div className="flex items-center justify-between mb-2.5">
                           <span
-                            className="text-[10px] font-mono font-semibold uppercase tracking-wider flex items-center gap-1"
+                            className="text-[13px] font-mono font-semibold uppercase tracking-wider flex items-center gap-1"
                             style={{ color: 'var(--accent-secondary)' }}
                           >
                             <Swords className="w-3 h-3" strokeWidth={1.6} /> H2H
                           </span>
-                          <span className="text-[11px] font-mono font-bold tabular-nums" style={{ color: 'var(--accent-secondary)' }}>
+                          <span className="text-[14px] font-mono font-bold tabular-nums" style={{ color: 'var(--accent-secondary)' }}>
                             100.000đ
                           </span>
                         </div>
@@ -1056,7 +1056,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                             <p className="text-xs font-semibold truncate font-display" style={{ color: 'var(--text-main)' }}>
                               {m.h2hWinner}
                             </p>
-                            <p className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                            <p className="text-[13px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
                               {m.h2hPoints > 0 ? `${m.h2hPoints} Pts H2H` : 'Chờ hoàn thành'}
                             </p>
                           </div>
@@ -1064,7 +1064,7 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                       </div>
 
                       <div
-                        className="mt-2.5 pt-2 border-t text-[10px] font-mono flex items-center gap-1"
+                        className="mt-2.5 pt-2 border-t text-[13px] font-mono flex items-center gap-1"
                         style={{ borderColor: 'var(--border-subtle)', color: m.paidH2H ? 'var(--accent-secondary)' : 'var(--text-faint)' }}
                       >
                         {m.paidH2H ? (

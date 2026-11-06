@@ -170,7 +170,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                         <div className="min-w-0 sm:w-full">
                           <span
-                            className="inline-block text-[10px] font-mono font-bold uppercase tracking-[0.14em]"
+                            className="inline-block text-[13px] font-mono font-bold uppercase tracking-[0.14em]"
                             style={{ color: card.accentColor }}
                           >
                             {card.title}
@@ -182,7 +182,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             {player?.manager || `Hạng ${card.rank}`}
                           </p>
                           <p
-                            className="text-[11px] truncate"
+                            className="text-[14px] truncate"
                             style={{ color: 'var(--text-muted)' }}
                           >
                             {player?.team || 'HTCV Team'}
@@ -203,14 +203,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           >
                             {total}
                           </span>
-                          <span className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                          <span className="text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
                             pts
                           </span>
                         </div>
 
                         <div className="flex items-center justify-end sm:justify-center gap-1.5 mt-1.5">
                           <span
-                            className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full"
+                            className="text-[13px] font-mono font-semibold px-2 py-0.5 rounded-full"
                             style={{
                               backgroundColor:
                                 card.rank === 1 ? 'var(--accent-gold-soft)' : 'var(--bg-card)',
@@ -222,7 +222,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </span>
                           {card.rank > 1 && total > 0 && (
                             <span
-                              className="text-[10px] font-mono tabular-nums"
+                              className="text-[13px] font-mono tabular-nums"
                               style={{ color: 'var(--text-faint)' }}
                             >
                               {diff}đ
@@ -270,7 +270,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       showClubBadge
                     />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-mono font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                      <p className="text-[14px] font-mono font-semibold" style={{ color: 'var(--accent-primary)' }}>
                         Gameweek {latestWinner?.gw || 1}
                       </p>
                       <h3
@@ -293,7 +293,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       >
                         {latestWinner.points}
                       </p>
-                      <p className="text-[10px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
+                      <p className="text-[13px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
                         điểm vòng
                       </p>
                     </div>
@@ -328,7 +328,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </span>
                     {isLive && (
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[13px] font-mono font-semibold"
                         style={{
                           backgroundColor: 'var(--accent-tertiary-soft)',
                           color: 'var(--accent-tertiary)',
@@ -362,7 +362,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     />
                     <div className="min-w-0">
                       <p
-                        className="text-[10px] uppercase font-mono font-semibold tracking-wider"
+                        className="text-[13px] uppercase font-mono font-semibold tracking-wider"
                         style={{ color: 'var(--text-faint)' }}
                       >
                         Classic tháng
@@ -390,7 +390,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     />
                     <div className="min-w-0">
                       <p
-                        className="text-[10px] uppercase font-mono font-semibold tracking-wider"
+                        className="text-[13px] uppercase font-mono font-semibold tracking-wider"
                         style={{ color: 'var(--text-faint)' }}
                       >
                         H2H tháng
@@ -455,7 +455,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     >
                       Top 5 Classic League
                     </h3>
-                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                    <p className="text-[14px]" style={{ color: 'var(--text-muted)' }}>
                       Tổng điểm tích lũy toàn mùa
                     </p>
                   </div>
@@ -512,7 +512,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             >
                               {p.manager}
                             </p>
-                            <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+                            <p className="text-[14px] truncate" style={{ color: 'var(--text-muted)' }}>
                               {p.team}
                             </p>
                           </div>
@@ -524,11 +524,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             style={{ color: 'var(--accent-primary)' }}
                           >
                             {p.total}{' '}
-                            <span className="text-[10px] font-mono font-normal" style={{ color: 'var(--text-muted)' }}>
+                            <span className="text-[13px] font-mono font-normal" style={{ color: 'var(--text-muted)' }}>
                               pts
                             </span>
                           </p>
-                          <p className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
+                          <p className="text-[13px] font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
                             TB {p.average}
                           </p>
                         </div>
@@ -579,7 +579,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     >
                       Top 5 Head-to-Head
                     </h3>
-                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                    <p className="text-[14px]" style={{ color: 'var(--text-muted)' }}>
                       Thắng 3 điểm, hòa 1 điểm, thua 0 điểm
                     </p>
                   </div>
@@ -636,7 +636,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             >
                               {p.manager}
                             </p>
-                            <p className="text-[11px] font-mono truncate" style={{ color: 'var(--text-muted)' }}>
+                            <p className="text-[14px] font-mono truncate" style={{ color: 'var(--text-muted)' }}>
                               {p.played} trận · {p.won}T {p.drawn}H {p.lost}B
                             </p>
                           </div>
@@ -648,11 +648,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             style={{ color: 'var(--accent-secondary)' }}
                           >
                             {p.points}{' '}
-                            <span className="text-[10px] font-mono font-normal" style={{ color: 'var(--text-muted)' }}>
+                            <span className="text-[13px] font-mono font-normal" style={{ color: 'var(--text-muted)' }}>
                               Pts
                             </span>
                           </p>
-                          <p className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
+                          <p className="text-[13px] font-mono tabular-nums" style={{ color: 'var(--text-faint)' }}>
                             Classic {p.classicTotal}
                           </p>
                         </div>

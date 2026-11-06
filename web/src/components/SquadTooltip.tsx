@@ -83,7 +83,7 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
           <p className="text-xs font-bold truncate" style={{ color: 'var(--accent-primary)' }}>
             {score.team || score.manager}
           </p>
-          <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-[13px] font-mono" style={{ color: 'var(--text-muted)' }}>
             GW{gw} · {score.manager}
             {score.chip ? ` · ${score.chip.toUpperCase()}` : ''}
           </p>
@@ -93,7 +93,7 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
             <p className="text-base font-bold font-mono tabular-nums leading-none" style={{ color: 'var(--text-main)' }}>
               {score.netPoints}
             </p>
-            <p className="text-[9px] font-mono" style={{ color: 'var(--text-faint)' }}>
+            <p className="text-[12px] font-mono" style={{ color: 'var(--text-faint)' }}>
               pts
             </p>
           </div>
@@ -132,7 +132,7 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
             >
               <span className="flex items-center gap-1.5 min-w-0">
                 <span
-                  className="text-[11px] truncate max-w-[150px]"
+                  className="text-[14px] truncate max-w-[150px]"
                   style={{
                     color: p.slot <= 11 ? 'var(--text-main)' : 'var(--text-muted)',
                   }}
@@ -141,7 +141,7 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
                 </span>
                 {p.sub && (
                   <span
-                    className="text-[9px] font-bold"
+                    className="text-[12px] font-bold"
                     title={
                       p.sub === 'in'
                         ? 'Vào sân từ ghế dự bị tự động'
@@ -157,7 +157,7 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
                 )}
                 {isCap && (
                   <span
-                    className="text-[8px] font-bold font-mono px-1 py-0.5 rounded"
+                    className="text-[12px] font-bold font-mono px-1 py-0.5 rounded"
                     style={{
                       backgroundColor: 'var(--accent-tertiary)',
                       color: '#ffffff',
@@ -168,7 +168,7 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
                 )}
                 {!isCap && p.vice && (
                   <span
-                    className="text-[8px] font-bold font-mono px-1 py-0.5 rounded"
+                    className="text-[12px] font-bold font-mono px-1 py-0.5 rounded"
                     style={{
                       backgroundColor: 'var(--bg-elevated)',
                       color: 'var(--text-muted)',
@@ -179,11 +179,11 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
                 )}
               </span>
               <span className="flex items-center gap-1.5 flex-shrink-0 tabular-nums">
-                <span className="text-[9px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                <span className="text-[12px] font-mono" style={{ color: 'var(--text-faint)' }}>
                   {p.team}
                 </span>
                 <span
-                  className="text-[11px] font-semibold font-mono w-6 text-right"
+                  className="text-[14px] font-semibold font-mono w-6 text-right"
                   style={{
                     color: notPlayed
                       ? 'var(--text-faint)'
@@ -204,7 +204,7 @@ export const SquadTooltip: React.FC<SquadTooltipProps> = ({ score, gw, children 
       </div>
 
       <div
-        className="px-3.5 py-2 text-[10px] font-mono leading-relaxed tabular-nums"
+        className="px-3.5 py-2 text-[13px] font-mono leading-relaxed tabular-nums"
         style={{
           borderTop: '1px solid var(--border-subtle)',
           backgroundColor: 'var(--table-head-bg)',

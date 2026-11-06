@@ -285,7 +285,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                   Trợ lý AI
                 </span>
                 <span
-                  className="hidden sm:inline-block text-[9px] font-mono px-1.5 py-0.5 rounded-full"
+                  className="hidden sm:inline-block text-[12px] font-mono px-1.5 py-0.5 rounded-full"
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.12)',
                     color: '#e9d5ff',
@@ -295,7 +295,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 </span>
               </div>
               <span
-                className="hidden sm:block text-[10px] font-mono"
+                className="hidden sm:block text-[13px] font-mono"
                 style={{ color: sending ? '#34d399' : 'rgba(243, 232, 255, 0.78)' }}
               >
                 {sending
@@ -355,7 +355,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                     Trợ lý chiến thuật AI
                   </h3>
                   <span
-                    className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap"
+                    className="text-[13px] font-mono font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap"
                     style={{
                       backgroundColor: 'var(--accent-secondary-soft)',
                       color: 'var(--accent-secondary)',
@@ -364,7 +364,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                     {upcomingGW ? `GW${upcomingGW} sắp tới` : 'Mùa 26/27'}
                   </span>
                 </div>
-                <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-[14px] truncate" style={{ color: 'var(--text-muted)' }}>
                   {remaining !== null && limit !== null
                     ? `Còn ${remaining}/${limit} lượt hỏi hôm nay`
                     : 'Tối đa 10 câu mỗi HLV mỗi ngày'}
@@ -438,7 +438,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
             <div className="flex items-center justify-between gap-2">
               <label
                 htmlFor="ai-popup-manager"
-                className="text-[11px] font-mono whitespace-nowrap"
+                className="text-[14px] font-mono whitespace-nowrap"
                 style={{ color: 'var(--text-muted)' }}
               >
                 Đội phân tích:
@@ -501,7 +501,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 </button>
               </form>
             ) : (
-              <div className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center justify-between text-[14px]">
                 <span className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
                   <span
                     className="w-1.5 h-1.5 rounded-full"
@@ -540,7 +540,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
 
                 <div>
                   <p
-                    className="text-[10px] font-mono uppercase tracking-[0.16em] mb-2 px-0.5"
+                    className="text-[13px] font-mono uppercase tracking-[0.16em] mb-2 px-0.5"
                     style={{ color: 'var(--text-faint)' }}
                   >
                     Gợi ý câu hỏi nhanh
@@ -595,7 +595,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                   >
                     {t.factsOnly && (
                       <div
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono mb-2"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[13px] font-mono mb-2"
                         style={{
                           backgroundColor: 'var(--accent-gold-soft)',
                           color: 'var(--accent-gold)',
@@ -606,7 +606,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                     )}
                     <p className="whitespace-pre-wrap">{t.answer}</p>
                     <p
-                      className="text-[10px] font-mono mt-2 text-right"
+                      className="text-[13px] font-mono mt-2 text-right"
                       style={{ color: 'var(--text-faint)' }}
                     >
                       {t.at}
@@ -634,7 +634,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                   <p className="font-medium" style={{ color: 'var(--text-main)' }}>
                     Đang tổng hợp số liệu đội hình ({elapsedSec}s)
                   </p>
-                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-faint)' }}>
+                  <p className="text-[14px] mt-0.5" style={{ color: 'var(--text-faint)' }}>
                     Quá trình kiểm chứng số liệu thường mất 6 đến 30 giây.
                   </p>
                 </div>
@@ -684,7 +684,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 style={{ color: 'var(--text-main)' }}
               />
               {question.length > 220 && (
-                <span className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                <span className="text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
                   {MAX_QUESTION - question.length}
                 </span>
               )}
@@ -701,7 +701,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 <Send className="w-3.5 h-3.5" strokeWidth={1.7} />
               </button>
             </div>
-            <p className="text-[10px] text-center mt-1.5" style={{ color: 'var(--text-faint)' }}>
+            <p className="text-[13px] text-center mt-1.5" style={{ color: 'var(--text-faint)' }}>
               Câu hỏi lưu ẩn danh 30 ngày. Hãy đối chiếu thêm bảng số liệu trước giờ chốt đội.
             </p>
           </form>

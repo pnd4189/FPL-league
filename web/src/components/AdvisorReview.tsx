@@ -94,7 +94,7 @@ export const AdvisorReview: React.FC<{ managerId: number; initial: AiReview | nu
 
           {status === 'updating' && (
             <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-mono"
               style={{ backgroundColor: 'var(--bg-card-solid)', color: 'var(--text-muted)' }}
             >
               <Loader2 className="w-3 h-3 animate-spin-smooth" strokeWidth={1.6} />

@@ -54,7 +54,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               </span>
             </span>
             <span
-              className="text-[11px] font-mono font-medium px-2.5 py-1 rounded-full"
+              className="text-[14px] font-mono font-medium px-2.5 py-1 rounded-full"
               style={{
                 color: 'var(--text-muted)',
                 backgroundColor: 'var(--bg-tray)',
@@ -117,7 +117,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               className="pressable text-left group"
             >
               <p
-                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight flex items-center gap-1"
+                className="text-2xl sm:text-3xl font-stats font-extrabold tabular-nums tracking-tight flex items-center gap-1"
                 style={{ color: 'var(--text-main)' }}
               >
                 <span>7,0M</span>
@@ -127,38 +127,38 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                   style={{ color: 'var(--accent-primary)' }}
                 />
               </p>
-              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-[14px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
                 Quỹ thưởng VNĐ
               </p>
             </button>
 
             <div>
               <p
-                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight"
+                className="text-2xl sm:text-3xl font-stats font-extrabold tabular-nums tracking-tight"
                 style={{ color: 'var(--accent-primary)' }}
               >
                 50K
               </p>
-              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-[14px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
                 Nhất vòng × 38
               </p>
             </div>
 
             <div>
               <p
-                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight"
+                className="text-2xl sm:text-3xl font-stats font-extrabold tabular-nums tracking-tight"
                 style={{ color: 'var(--accent-secondary)' }}
               >
                 200K
               </p>
-              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-[14px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
                 Nhất tháng × 10
               </p>
             </div>
 
             <div>
               <p
-                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight"
+                className="text-2xl sm:text-3xl font-stats font-extrabold tabular-nums tracking-tight"
                 style={{ color: 'var(--text-main)' }}
               >
                 {dashboard.gwsCompleted || 0}
@@ -166,7 +166,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                   /38
                 </span>
               </p>
-              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-[14px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
                 Vòng đã hoàn tất
               </p>
             </div>
@@ -197,7 +197,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                   {/* Top Broadcast Identifiers */}
                   <div className="absolute top-3.5 inset-x-3.5 sm:top-4 sm:inset-x-4 flex items-center justify-between gap-2 z-10">
                     <span
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-semibold uppercase tracking-[0.14em] backdrop-blur-md"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-mono font-semibold uppercase tracking-[0.14em] backdrop-blur-md"
                       style={{
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
                         color: '#38003c',
@@ -209,7 +209,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     </span>
 
                     <span
-                      className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-medium backdrop-blur-md"
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-[13px] font-mono font-medium backdrop-blur-md"
                       style={{
                         backgroundColor: 'rgba(23, 11, 38, 0.68)',
                         color: '#f8f7fc',
@@ -244,7 +244,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     />
                     <div className="min-w-0">
                       <span
-                        className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold uppercase tracking-wider"
+                        className="inline-flex items-center gap-1 text-[13px] font-mono font-semibold uppercase tracking-wider"
                         style={{ color: 'var(--accent-gold)' }}
                       >
                         <Trophy className="w-3 h-3" strokeWidth={1.7} />
@@ -256,7 +256,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                       >
                         {classicLeader?.manager || 'Đang tải'}
                       </p>
-                      <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+                      <p className="text-[14px] truncate" style={{ color: 'var(--text-muted)' }}>
                         {classicLeader?.team || 'HTCV League'}
                       </p>
                     </div>
@@ -269,7 +269,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     >
                       {classicLeader?.total ?? 0}
                     </p>
-                    <p className="text-[10px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
+                    <p className="text-[13px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
                       pts
                     </p>
                   </div>
@@ -295,7 +295,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     />
                     <div className="min-w-0">
                       <span
-                        className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold uppercase tracking-wider"
+                        className="inline-flex items-center gap-1 text-[13px] font-mono font-semibold uppercase tracking-wider"
                         style={{ color: 'var(--accent-secondary)' }}
                       >
                         <Swords className="w-3 h-3" strokeWidth={1.7} />
@@ -307,7 +307,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                       >
                         {h2hLeader?.manager || 'Đang tải'}
                       </p>
-                      <p className="text-[11px] font-mono truncate" style={{ color: 'var(--text-muted)' }}>
+                      <p className="text-[14px] font-mono truncate" style={{ color: 'var(--text-muted)' }}>
                         {h2hLeader ? `${h2hLeader.won}T · ${h2hLeader.drawn}H · ${h2hLeader.lost}B` : 'Đối đầu 1v1'}
                       </p>
                     </div>
@@ -320,7 +320,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     >
                       {h2hLeader?.points ?? 0}
                     </p>
-                    <p className="text-[10px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
+                    <p className="text-[13px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
                       Pts
                     </p>
                   </div>

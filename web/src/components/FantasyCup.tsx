@@ -45,7 +45,7 @@ export const FantasyCup: React.FC = () => {
         <div className="bezel-shell">
           <div className="bezel-core p-5 sm:p-8 overflow-x-auto touch-scroll">
             <div
-              className="md:hidden flex items-center justify-between pb-3 mb-4 text-[10px] font-mono"
+              className="md:hidden flex items-center justify-between pb-3 mb-4 text-[13px] font-mono"
               style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}
             >
               <span>Sơ đồ phân nhánh Top 8</span>
@@ -62,7 +62,7 @@ export const FantasyCup: React.FC = () => {
                   <span className="text-xs font-mono font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                     Tứ kết · GW36
                   </span>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-faint)' }}>
+                  <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-faint)' }}>
                     8 HLV hạt giống
                   </p>
                 </div>
@@ -104,7 +104,7 @@ export const FantasyCup: React.FC = () => {
                   <span className="text-xs font-mono font-semibold uppercase tracking-wider" style={{ color: 'var(--accent-secondary)' }}>
                     Bán kết · GW37
                   </span>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-faint)' }}>
+                  <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-faint)' }}>
                     4 đội tranh vé Chung kết
                   </p>
                 </div>
@@ -154,7 +154,7 @@ export const FantasyCup: React.FC = () => {
                     <Trophy className="w-3.5 h-3.5" strokeWidth={1.6} />
                     <span>Chung kết · GW38</span>
                   </span>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     Trận quyết định danh hiệu Cup
                   </p>
                 </div>
@@ -198,7 +198,7 @@ export const FantasyCup: React.FC = () => {
                       style={{ borderTop: '1px solid var(--border-subtle)' }}
                     >
                       <span
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono font-semibold text-[11px]"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono font-semibold text-[14px]"
                         style={{
                           backgroundColor: 'var(--accent-gold-soft)',
                           color: 'var(--accent-gold)',

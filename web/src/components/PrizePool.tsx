@@ -116,7 +116,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
             </div>
 
             <div className="surface-well px-4 py-3 text-right flex-shrink-0">
-              <p className="text-[10px] uppercase tracking-widest font-mono" style={{ color: 'var(--text-faint)' }}>
+              <p className="text-[13px] uppercase tracking-widest font-mono" style={{ color: 'var(--text-faint)' }}>
                 Tổng quỹ giải đấu
               </p>
               <p className="text-base sm:text-lg font-bold font-mono tabular-nums" style={{ color: 'var(--accent-gold)' }}>
@@ -186,7 +186,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
                 />
                 <div className="min-w-0">
                   <span
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider font-mono"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-semibold uppercase tracking-wider font-mono"
                     style={{ backgroundColor: 'var(--accent-gold-soft)', color: 'var(--accent-gold)' }}
                   >
                     <Crown className="w-3 h-3" strokeWidth={1.6} />
@@ -202,7 +202,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
               </div>
 
               <div className="surface-well px-4 py-3 text-right w-full sm:w-auto">
-                <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>
+                <p className="text-[13px] font-mono uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>
                   Tổng thưởng tích lũy
                 </p>
                 <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums" style={{ color: 'var(--accent-gold)' }}>
@@ -218,7 +218,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
               style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
             >
               <div
-                className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[10px] font-mono"
+                className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
                 style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
               >
                 <span>Bảng tiền thưởng 14 HLV</span>
@@ -226,7 +226,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
               </div>
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
-                  className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider border-b"
+                  className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"
                   style={{
                     backgroundColor: 'var(--table-head-bg)',
                     borderColor: 'var(--border-subtle)',
@@ -328,7 +328,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
                                   />
                                 )}
                               </p>
-                              <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                              <p className="text-[13px] truncate" style={{ color: 'var(--text-muted)' }}>
                                 {p.team}
                               </p>
                             </div>
@@ -339,7 +339,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
                         <td className="py-3 px-3 text-center font-mono">
                           {p.weeklyCount > 0 ? (
                             <span
-                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[11px]"
+                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[14px]"
                               style={{
                                 backgroundColor: 'var(--accent-primary-soft)',
                                 color: 'var(--accent-primary)',
@@ -356,7 +356,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
                         <td className="py-3 px-3 text-center font-mono">
                           {p.monthlyClassicCount > 0 ? (
                             <span
-                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[11px]"
+                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[14px]"
                               style={{
                                 backgroundColor: 'var(--accent-tertiary-soft)',
                                 color: 'var(--accent-tertiary)',
@@ -373,7 +373,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
                         <td className="py-3 px-3 text-center font-mono">
                           {p.monthlyH2HCount > 0 ? (
                             <span
-                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[11px]"
+                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[14px]"
                               style={{
                                 backgroundColor: 'var(--accent-secondary-soft)',
                                 color: 'var(--accent-secondary)',
@@ -403,7 +403,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
                           style={{ color: 'var(--accent-gold)', backgroundColor: 'var(--accent-gold-soft)' }}
                         >
                           {p.totalWon.toLocaleString('vi-VN')}{' '}
-                          <span className="text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>
+                          <span className="text-[13px] font-normal" style={{ color: 'var(--text-muted)' }}>
                             VNĐ
                           </span>
                         </td>
@@ -428,7 +428,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
               <h4 className="text-sm sm:text-base font-display font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
                 Cơ cấu phân bổ toàn bộ quỹ thưởng
               </h4>
-              <span className="text-[11px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-[14px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
                 10 hạng mục
               </span>
             </div>
@@ -436,7 +436,7 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
             <div className="overflow-x-auto touch-scroll">
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
-                  className="font-mono text-[10px] uppercase tracking-wider border-b"
+                  className="font-mono text-[13px] uppercase tracking-wider border-b"
                   style={{
                     backgroundColor: 'var(--table-head-bg)',
                     borderColor: 'var(--border-subtle)',

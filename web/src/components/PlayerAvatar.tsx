@@ -17,7 +17,7 @@ interface PlayerAvatarProps {
 }
 
 const SIZE_MAP: Record<NonNullable<PlayerAvatarProps['size']>, string> = {
-  xs: 'w-7 h-7 text-[10px]',
+  xs: 'w-7 h-7 text-[13px]',
   sm: 'w-9 h-9 text-xs',
   md: 'w-11 h-11 text-xs sm:text-sm',
   lg: 'w-14 h-14 sm:w-16 sm:h-16 text-sm sm:text-base',
@@ -169,7 +169,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 
       {rank !== undefined && rank > 0 && rank <= 3 && size !== 'xs' && (
         <div
-          className="absolute -bottom-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold font-mono tabular-nums z-10"
+          className="absolute -bottom-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[12px] sm:text-[13px] font-bold font-mono tabular-nums z-10"
           style={
             isRank1
               ? {
