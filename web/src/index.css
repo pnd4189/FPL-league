@@ -55,6 +55,7 @@
      Rich satin aubergine-indigo broadcast palette — never pitch-black OLED.
      ========================================================================= */
   [data-theme='dusk'] {
+    color-scheme: dark;
     --bg-app: #221a36;
     --bg-header: rgba(42, 32, 68, 0.84);
     --bg-overlay: rgba(20, 14, 34, 0.68);
@@ -97,6 +98,12 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+  }
+
+  /* Dropdown items are drawn by the browser on a system background; give them the app's surface and text colours. */
+  option {
+    background-color: var(--bg-card-solid);
+    color: var(--text-main);
   }
 
   body {
