@@ -94,9 +94,18 @@ export const RoamingBall: React.FC = () => {
     let vx = 150;
     let vy = 0;
     let roll = 0;
+    let spin = 0; // extra turn speed in degrees per second, from clicks; decays
     let kickTimer = 0;
     let last = performance.now();
     let raf = 0;
+
+    // A click sends the ball up and sideways, spinning hard.
+    const kickBall = () => {
+      vy = -(620 + Math.random() * 260);
+      vx = (Math.random() > 0.5 ? 1 : -1) * (260 + Math.random() * 240);
+      spin = (vx > 0 ? 1 : -1) * (900 + Math.random() * 600);
+      kickTimer = 0;
+    };
 
     const onResize = () => {
       size = el.offsetWidth;
@@ -136,6 +145,8 @@ export const RoamingBall: React.FC = () => {
         vx = (Math.random() > 0.5 ? 1 : -1) * (120 + Math.random() * 180);
       }
 
+      spin *= Math.pow(0.35, dt);
+      roll += spin * dt;
       // Rolling without slipping: the angle turned equals the distance covered over the radius.
       roll += ((vx * dt) / (size / 2)) * (180 / Math.PI);
       el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) rotate(${roll.toFixed(1)}deg)`;
@@ -143,6 +154,7 @@ export const RoamingBall: React.FC = () => {
     };
 
     window.addEventListener('resize', onResize);
+    el.addEventListener('pointerdown', kickBall);
     raf = requestAnimationFrame((now) => {
       last = now;
       frame(now);
@@ -150,6 +162,7 @@ export const RoamingBall: React.FC = () => {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize);
+      el.removeEventListener('pointerdown', kickBall);
     };
   }, []);
 
@@ -157,7 +170,7 @@ export const RoamingBall: React.FC = () => {
     <div
       ref={ref}
       aria-hidden="true"
-      className="pointer-events-none absolute left-0 top-0 w-16 md:w-24 aspect-square will-change-transform"
+      className="pointer-events-auto absolute left-0 top-0 w-16 md:w-24 aspect-square cursor-pointer select-none touch-none will-change-transform"
     >
       <BallArt />
     </div>
