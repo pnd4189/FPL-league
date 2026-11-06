@@ -7,8 +7,9 @@
  * that were not in the facts. They are optional layers: any failure (no key,
  * out of free tokens, gateway down) leaves the advisor tab working.
  *
- * Script Properties used: INCEPTION_API_KEY and DAHL_API_KEY (Ai.gs) and LEAGUE_CHAT_CODE, the shared
- * code that unlocks the chat. Neither is ever returned to the browser or logged.
+ * Script Properties used: INCEPTION_API_KEY and DAHL_API_KEY (Ai.gs). Neither is ever
+ * returned to the browser or logged. The chat needs no code: one daily pool of questions
+ * shared by the whole league caps the cost.
  */
 
 // Bump when the facts a comment is written from change, so old comments are rewritten once.
@@ -16,9 +17,8 @@ const AI_REVIEW_VERSION = 4;
 const AI_REVIEW_BUSY_TTL = 100;      // seconds — a comment being written blocks a second writer
 const AI_REVIEW_FAIL_TTL = 1800;     // seconds — after a failure, don't retry the same numbers
 const AI_REVIEW_DAILY_LIMIT = 120;   // comments written per day, a safety net against a loop
-const AI_CHAT_DAILY_LIMIT = 10;      // questions per manager per day (Vietnam time)
+const AI_CHAT_DAILY_LIMIT = 200;     // questions per day for the whole league (Vietnam time)
 const AI_CHAT_MAX_QUESTION = 300;    // characters
-const AI_CHAT_MAX_FAILED_CODES = 30; // wrong codes per hour before chat locks for everyone
 // A question with no topic gets these packs (injuries show up in the transfer plan), kept small for speed.
 const AI_CHAT_DEFAULT_TOPICS = ["captain", "h2h", "transfers", "chipsBrief"];
 const AI_CHAT_MEMORY_TURNS = 2;      // earlier questions kept so follow-ups make sense
@@ -184,7 +184,7 @@ function handleAiReview_(entryId) {
   if (stored && stored.fp === fp) return reply("fresh", reviewView_(stored, fp));
 
   const old = reviewView_(stored, fp);
-  if (!getAiKey_()) return reply("failed", old);
+  if (!hasAiKey_()) return reply("failed", old);
   const cache = CacheService.getScriptCache();
   const failKey = "ai_review_fail|" + d.id + "|" + fp;
   const busyKey = "ai_review_busy|" + d.id + "|" + fp;
@@ -265,29 +265,29 @@ function findMentionedPlayers_(pool, question, ownedIds) {
 }
 
 /** Take one question from a manager's daily allowance; returns what is left, or -1 when none. */
-function takeChatQuestion_(managerId) {
+function takeChatQuestion_() {
   const props = PropertiesService.getScriptProperties();
   const day = vietnamDay_();
-  const key = "chat|" + day + "|" + managerId;
+  const key = "chat|" + day + "|all";
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) return -1;
+  if (!lock.tryLock(5000)) return false;
   try {
     const used = parseInt(props.getProperty(key) || "0", 10);
-    if (used >= AI_CHAT_DAILY_LIMIT) return -1;
+    if (used >= AI_CHAT_DAILY_LIMIT) return false;
     props.setProperty(key, String(used + 1));
     for (const old of props.getKeys()) {
       if (old.indexOf("chat|") === 0 && old.indexOf("chat|" + day + "|") !== 0) props.deleteProperty(old);
     }
-    return AI_CHAT_DAILY_LIMIT - used - 1;
+    return true;
   } finally {
     lock.releaseLock();
   }
 }
 
 /** Give a question back when the AI could not answer, so a failure costs nothing. */
-function refundChatQuestion_(managerId) {
+function refundChatQuestion_() {
   const props = PropertiesService.getScriptProperties();
-  const key = "chat|" + vietnamDay_() + "|" + managerId;
+  const key = "chat|" + vietnamDay_() + "|all";
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return;
   try {
@@ -359,23 +359,12 @@ const AI_ERROR_TEXT = {
 
 /**
  * Answer one chat question.
- * Params: id (manager entry id), code (shared league code), q (the question),
- * fresh=1 to forget the earlier questions.
+ * Params: id (manager entry id), q (the question), fresh=1 to forget the earlier questions.
+ * No code is needed; one pool of AI_CHAT_DAILY_LIMIT questions a day is shared by everyone.
  */
 function handleAiChat_(params) {
   const arrived = Date.now();
-  const chatCode = (PropertiesService.getScriptProperties().getProperty("LEAGUE_CHAT_CODE") || "").trim();
-  if (!getAiKey_() || !chatCode) return { status: "error", code: "disabled", message: "Chat AI chưa được bật." };
-
-  const cache = CacheService.getScriptCache();
-  const failed = parseInt(cache.get("chat_failed_codes") || "0", 10);
-  if (failed >= AI_CHAT_MAX_FAILED_CODES) {
-    return { status: "error", code: "locked", message: "Có quá nhiều lần nhập sai mã, chat tạm khoá khoảng 1 giờ." };
-  }
-  if (String(params.code || "").trim() !== chatCode) {
-    cache.put("chat_failed_codes", String(failed + 1), 3600);
-    return { status: "error", code: "bad_code", message: "Mã chung của league chưa đúng." };
-  }
+  if (!hasAiKey_()) return { status: "error", code: "disabled", message: "Chat AI chưa được bật." };
 
   const manager = getActivePlayers().filter(function (p) { return String(p.id) === String(params.id); })[0];
   if (!manager) return { status: "error", code: "bad_manager", message: "Không tìm thấy HLV này." };
@@ -390,9 +379,8 @@ function handleAiChat_(params) {
   if (advice.status !== "success") return { status: "error", code: "no_data", message: advice.message };
   const d = advice.data;
 
-  const remaining = takeChatQuestion_(manager.id);
-  if (remaining < 0) {
-    return { status: "error", code: "limit", message: "Hôm nay " + manager.manager + " đã dùng hết " + AI_CHAT_DAILY_LIMIT + " câu hỏi, quay lại sau 0h nhé.", remaining: 0, limit: AI_CHAT_DAILY_LIMIT };
+  if (!takeChatQuestion_()) {
+    return { status: "error", code: "limit", message: "Đã hết lượt hỏi hôm nay, chờ ngày mai nhé." };
   }
   const started = Date.now();
 
@@ -426,9 +414,9 @@ function handleAiChat_(params) {
   const result = askCheckedAi_(messages, checkFacts, pool, arrived);
 
   if (!result.ok) {
-    refundChatQuestion_(manager.id);
+    refundChatQuestion_();
     logAiChat_(d.gw, topics, question, "error:" + result.error, Date.now() - started, result.model);
-    return { status: "error", code: "ai_" + result.error, message: AI_ERROR_TEXT[result.error] || AI_ERROR_TEXT.failed, remaining: remaining + 1, limit: AI_CHAT_DAILY_LIMIT };
+    return { status: "error", code: "ai_" + result.error, message: AI_ERROR_TEXT[result.error] || AI_ERROR_TEXT.failed };
   }
 
   // An answer that kept straying from the facts is replaced by the facts themselves.
@@ -438,5 +426,5 @@ function handleAiChat_(params) {
   memory.push({ q: question, a: answer.slice(0, 400) });
   writeChatMemory_(manager.id, memory);
   logAiChat_(d.gw, topics, question, result.outcome, Date.now() - started, result.model, result.strayed);
-  return { status: "success", data: { answer: answer, source: result.text ? "ai" : "facts", outcome: result.outcome, remaining: remaining, limit: AI_CHAT_DAILY_LIMIT } };
+  return { status: "success", data: { answer: answer, source: result.text ? "ai" : "facts", outcome: result.outcome } };
 }

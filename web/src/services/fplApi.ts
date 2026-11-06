@@ -393,17 +393,17 @@ export async function fetchAdvisorHunt(pos: number, maxCost: number): Promise<{ 
 // backend still answered and counted. Never retried.
 const CHAT_TIMEOUT_MS = 90000;
 
-export async function askAdvisorChat(entryId: number, code: string, question: string, fresh = false): Promise<ChatReply> {
-  const url = `${endpoint('chat')}&id=${entryId}&code=${encodeURIComponent(code)}&q=${encodeURIComponent(question)}${fresh ? '&fresh=1' : ''}`;
+export async function askAdvisorChat(entryId: number, question: string, fresh = false): Promise<ChatReply> {
+  const url = `${endpoint('chat')}&id=${entryId}&q=${encodeURIComponent(question)}${fresh ? '&fresh=1' : ''}`;
   try {
     const json = await fetchJson(url, CHAT_TIMEOUT_MS, 0);
     if (json?.status === 'success' && json.data) {
-      return { ok: true, answer: json.data.answer, source: json.data.source || 'ai', message: '', code: '', remaining: json.data.remaining ?? null, limit: json.data.limit ?? null };
+      return { ok: true, answer: json.data.answer, source: json.data.source || 'ai', message: '', code: '' };
     }
-    return { ok: false, answer: '', source: '', message: json?.message || 'Chưa trả lời được, thử lại sau.', code: json?.code || 'error', remaining: json?.remaining ?? null, limit: json?.limit ?? null };
+    return { ok: false, answer: '', source: '', message: json?.message || 'Chưa trả lời được, thử lại sau.', code: json?.code || 'error' };
   } catch (err) {
     console.warn('Advisor chat unavailable:', err);
-    return { ok: false, answer: '', source: '', message: 'Chưa nhận được câu trả lời (quá lâu hoặc mất kết nối). Câu hỏi này không bị tính, thử lại nhé.', code: 'network', remaining: null, limit: null };
+    return { ok: false, answer: '', source: '', message: 'Chưa nhận được câu trả lời (quá lâu hoặc mất kết nối). Câu hỏi này không bị tính, thử lại nhé.', code: 'network' };
   }
 }
 

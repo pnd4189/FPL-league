@@ -300,6 +300,4 @@ export interface ChatReply {
   source: 'ai' | 'facts' | '';  // 'facts' = the AI strayed, raw figures shown instead
   message: string;
   code: string;      // backend error code, empty on success
-  remaining: number | null;
-  limit: number | null;
 }

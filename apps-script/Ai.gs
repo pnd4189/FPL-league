@@ -46,6 +46,11 @@ function getInceptionKey_() {
   return (PropertiesService.getScriptProperties().getProperty("INCEPTION_API_KEY") || "").trim();
 }
 
+/** True when at least one provider key is set; callAi_ picks Mercury first and Dahl as the fallback. */
+function hasAiKey_() {
+  return !!(getInceptionKey_() || getAiKey_());
+}
+
 function getAiKey_() {
   return (PropertiesService.getScriptProperties().getProperty("DAHL_API_KEY") || "").trim();
 }

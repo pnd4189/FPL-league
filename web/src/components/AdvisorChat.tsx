@@ -4,8 +4,6 @@ import {
   RotateCcw,
   Send,
   X,
-  KeyRound,
-  Check,
   Compass,
   Loader2,
   ChevronDown,
@@ -16,7 +14,6 @@ import { INITIAL_PLAYERS } from '../data/initialData';
 import { isLuckyEligible } from '../services/xsmbService';
 import { LuckyNumbers } from './LuckyNumbers';
 
-const CODE_KEY = 'htcv_fpl_chat_code';
 const MAX_QUESTION = 300;
 
 const SUGGESTIONS = [
@@ -34,14 +31,6 @@ interface Turn {
   factsOnly: boolean;
   at: string;
 }
-
-const readSavedCode = (): string => {
-  try {
-    return localStorage.getItem(CODE_KEY) || '';
-  } catch {
-    return '';
-  }
-};
 
 export interface AdvisorChatProps {
   isOpen: boolean;
@@ -64,14 +53,10 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
   onConsumePrompt,
   onOpenAdvisorTab,
 }) => {
-  const [code, setCode] = useState(readSavedCode);
-  const [editingCode, setEditingCode] = useState(() => !readSavedCode());
   const [question, setQuestion] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [sending, setSending] = useState(false);
   const [elapsedSec, setElapsedSec] = useState(0);
-  const [remaining, setRemaining] = useState<number | null>(null);
-  const [limit, setLimit] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const [fresh, setFresh] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
@@ -90,11 +75,11 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
     if (isOpen) {
       setHasUnread(false);
       const t = window.setTimeout(() => {
-        if (!editingCode) inputRef.current?.focus();
+        inputRef.current?.focus();
       }, 180);
       return () => window.clearTimeout(t);
     }
-  }, [isOpen, editingCode]);
+  }, [isOpen]);
 
   // Global keyboard shortcuts: Cmd/Ctrl + J to toggle, Escape to close
   useEffect(() => {
@@ -133,18 +118,11 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
     async (text: string) => {
       const q = text.trim();
       if (!q || sending) return;
-      if (!code.trim()) {
-        setEditingCode(true);
-        setNotice('Nhập mã chung của giải đấu để bắt đầu hỏi trợ lý AI.');
-        return;
-      }
 
       setSending(true);
       setNotice('');
 
-      const reply = await askAdvisorChat(managerId, code.trim(), q, fresh);
-      if (reply.remaining !== null) setRemaining(reply.remaining);
-      if (reply.limit !== null) setLimit(reply.limit);
+      const reply = await askAdvisorChat(managerId, q, fresh);
 
       const nowStr = new Date().toLocaleTimeString('vi-VN', {
         hour: '2-digit',
@@ -152,12 +130,6 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
       });
 
       if (reply.ok) {
-        try {
-          localStorage.setItem(CODE_KEY, code.trim());
-        } catch {
-          /* private mode */
-        }
-        setEditingCode(false);
         setTurns((prev) => [
           ...prev,
           {
@@ -172,20 +144,8 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
         setQuestion('');
         setFresh(false);
         if (!isOpenRef.current) setHasUnread(true);
-      } else if (
-        reply.code === 'bad_code' ||
-        reply.code === 'locked' ||
-        reply.code === 'disabled'
-      ) {
+      } else if (reply.code === 'disabled') {
         setNotice(reply.message);
-        if (reply.code === 'bad_code') {
-          setEditingCode(true);
-          try {
-            localStorage.removeItem(CODE_KEY);
-          } catch {
-            /* ignore */
-          }
-        }
       } else {
         setTurns((prev) => [
           ...prev,
@@ -202,34 +162,15 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
       }
       setSending(false);
     },
-    [code, fresh, managerId, sending],
+    [fresh, managerId, sending],
   );
 
   // Handle prompt sent from other views (e.g. AdvisorView or ManagerModal)
   useEffect(() => {
     if (!queuedPrompt) return;
     onConsumePrompt?.();
-    if (!code.trim()) {
-      setQuestion(queuedPrompt);
-      setEditingCode(true);
-      setNotice('Nhập mã chung của giải đấu rồi nhấn Gửi để nhận phân tích.');
-      return;
-    }
     ask(queuedPrompt);
-  }, [queuedPrompt, onConsumePrompt, code, ask]);
-
-  const handleSaveCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code.trim()) return;
-    try {
-      localStorage.setItem(CODE_KEY, code.trim());
-    } catch {
-      /* ignore */
-    }
-    setEditingCode(false);
-    setNotice('');
-    inputRef.current?.focus();
-  };
+  }, [queuedPrompt, onConsumePrompt, ask]);
 
   return (
     <>
@@ -350,8 +291,8 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 <Sparkles className="w-4 h-4" strokeWidth={1.5} />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-display font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <h3 className="text-sm font-display font-bold leading-tight" style={{ color: 'var(--text-main)' }}>
                     Trợ lý chiến thuật AI
                   </h3>
                   <span
@@ -364,11 +305,6 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                     {upcomingGW ? `GW${upcomingGW} sắp tới` : 'Mùa 26/27'}
                   </span>
                 </div>
-                <p className="text-[14px] truncate" style={{ color: 'var(--text-muted)' }}>
-                  {remaining !== null && limit !== null
-                    ? `Còn ${remaining}/${limit} lượt hỏi hôm nay`
-                    : 'Tối đa 10 câu mỗi HLV mỗi ngày'}
-                </p>
               </div>
             </div>
 
@@ -427,7 +363,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
             </div>
           </div>
 
-          {/* Context Bar: Manager Selector + Compact League Code */}
+          {/* Context Bar: Manager Selector */}
           <div
             className="px-4 py-2.5 space-y-2"
             style={{
@@ -464,61 +400,6 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 ))}
               </select>
             </div>
-
-            {editingCode ? (
-              <form onSubmit={handleSaveCode} className="flex items-center gap-1.5">
-                <div className="relative flex-1 min-w-0">
-                  <KeyRound
-                    className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2"
-                    strokeWidth={1.5}
-                    style={{ color: 'var(--text-faint)' }}
-                  />
-                  <input
-                    type="password"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="Nhập mã chung của league..."
-                    autoComplete="off"
-                    className="w-full rounded-lg pl-8 pr-2.5 py-1.5 text-xs focus:outline-none"
-                    style={{
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--text-main)',
-                      boxShadow: '0 0 0 1px var(--border-highlight)',
-                    }}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!code.trim()}
-                  className="pressable px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-40"
-                  style={{
-                    backgroundColor: 'var(--accent-primary)',
-                    color: 'var(--accent-primary-ink)',
-                  }}
-                >
-                  <Check className="w-3.5 h-3.5" strokeWidth={1.8} />
-                  <span>Lưu</span>
-                </button>
-              </form>
-            ) : (
-              <div className="flex items-center justify-between text-[14px]">
-                <span className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: 'var(--accent-primary)' }}
-                  />
-                  Đã lưu mã giải đấu
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setEditingCode(true)}
-                  className="font-mono underline-offset-2 hover:underline"
-                  style={{ color: 'var(--text-faint)' }}
-                >
-                  Đổi mã
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Conversation Stream */}
