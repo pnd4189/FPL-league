@@ -29,13 +29,13 @@
     --text-muted: #615676;
     --text-faint: #8c82a0;
 
-    --accent-primary: #047857;
+    --accent-primary: #03855a;
     --accent-primary-ink: #ffffff;
-    --accent-primary-soft: rgba(4, 120, 87, 0.09);
-    --accent-secondary: #4f46e5;
-    --accent-secondary-soft: rgba(79, 70, 229, 0.09);
-    --accent-tertiary: #be123c;
-    --accent-tertiary-soft: rgba(190, 18, 60, 0.09);
+    --accent-primary-soft: rgba(3, 133, 90, 0.1);
+    --accent-secondary: #6d28d9;
+    --accent-secondary-soft: rgba(109, 40, 217, 0.1);
+    --accent-tertiary: #e11d48;
+    --accent-tertiary-soft: rgba(225, 29, 72, 0.1);
     --accent-gold: #b45309;
     --accent-gold-soft: rgba(217, 119, 6, 0.11);
     --accent-silver: #475569;
@@ -102,7 +102,7 @@
   body {
     background-color: var(--bg-app);
     color: var(--text-main);
-    font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
     letter-spacing: -0.011em;
     overflow-x: hidden;
     transition: background-color 280ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -352,6 +352,33 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* Pitch motifs in the background. Transform only; the reduced-motion rule above stops them. */
+.fpl-ball {
+  animation: fpl-ball-spin 36s linear infinite, fpl-ball-float 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+.fpl-blade {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: fpl-sway 4.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes fpl-ball-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fpl-ball-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -14px; }
+}
+
+@keyframes fpl-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(4deg); }
 }
 
 .touch-scroll {

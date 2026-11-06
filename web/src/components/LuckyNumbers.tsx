@@ -13,6 +13,8 @@ interface LuckyNumbersProps {
   managerId: number;
   /** Compact mode for the chat popup (less padding, smaller text). */
   compact?: boolean;
+  /** Sends a question to the league chat; the question box shows only when this is given. */
+  onAsk?: (question: string) => void;
 }
 
 // ─── Chart period options ────────────────────────────────────────────────────
@@ -244,11 +246,13 @@ const FrequencyChart: React.FC<{
 export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
   managerId,
   compact = false,
+  onAsk,
 }) => {
   const [analysis, setAnalysis] = useState<LuckyAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [h2hLabel, setH2hLabel] = useState('');
+  const [question, setQuestion] = useState('');
 
   const manager = INITIAL_PLAYERS.find((p) => p.id === managerId);
 
@@ -588,6 +592,44 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
               {' · '}Chỉ mang tính chất tham khảo
             </p>
           </div>
+        )}
+
+        {onAsk && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = question.trim();
+              if (!q) return;
+              onAsk(q);
+              setQuestion('');
+            }}
+            className="mt-3 flex items-center gap-1.5"
+          >
+            <input
+              type="text"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Hỏi thêm về con số may mắn..."
+              maxLength={300}
+              className="flex-1 min-w-0 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                boxShadow: '0 0 0 1px var(--border-highlight)',
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!question.trim()}
+              className="pressable px-2.5 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: 'var(--accent-primary-ink)',
+              }}
+            >
+              Hỏi
+            </button>
+          </form>
         )}
       </div>
     </div>

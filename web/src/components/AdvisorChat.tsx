@@ -535,7 +535,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 </div>
 
                 {isLuckyEligible(managerId) && (
-                  <LuckyNumbers managerId={managerId} compact />
+                  <LuckyNumbers managerId={managerId} compact onAsk={ask} />
                 )}
 
                 <div>

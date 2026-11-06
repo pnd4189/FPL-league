@@ -22,11 +22,11 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['"Be Vietnam Pro"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['"Be Vietnam Pro"', '"Plus Jakarta Sans"', 'Outfit', 'system-ui', 'sans-serif'],
-        editorial: ['Fraunces', '"Be Vietnam Pro"', 'Georgia', 'serif'],
+        sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Unbounded', '"Be Vietnam Pro"', 'system-ui', 'sans-serif'],
+        editorial: ['Unbounded', '"Be Vietnam Pro"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
-        stats: ['Outfit', '"JetBrains Mono"', 'sans-serif'],
+        stats: ['"Be Vietnam Pro"', 'system-ui', 'sans-serif'],
       },
       transitionTimingFunction: {
         'out-strong': 'cubic-bezier(0.23, 1, 0.32, 1)',
