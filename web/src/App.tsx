@@ -1,17 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { StadiumBackground } from './components/StadiumBackground';
 import { Navbar, ThemeMode } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
 import { DashboardView } from './components/DashboardView';
-import { ClassicTable } from './components/ClassicTable';
-import { H2HArena } from './components/H2HArena';
-import { WeeklyWinners } from './components/WeeklyWinners';
-import { MonthlyAwards } from './components/MonthlyAwards';
-import { FantasyCup } from './components/FantasyCup';
-import { HallOfFame } from './components/HallOfFame';
-import { AdvisorView } from './components/AdvisorView';
 import { AdvisorChat } from './components/AdvisorChat';
-import { PrizePool } from './components/PrizePool';
 import { ManagerModal } from './components/ManagerModal';
 
 import {
@@ -50,6 +42,27 @@ import {
   MonthlyAward,
   LiveGwData,
 } from './types';
+
+// Tabs other than the overview load on demand; they are fetched in the background once the page is idle.
+const TAB_LOADERS = {
+  classic: () => import('./components/ClassicTable').then(m => ({ default: m.ClassicTable })),
+  h2h: () => import('./components/H2HArena').then(m => ({ default: m.H2HArena })),
+  weekly: () => import('./components/WeeklyWinners').then(m => ({ default: m.WeeklyWinners })),
+  monthly: () => import('./components/MonthlyAwards').then(m => ({ default: m.MonthlyAwards })),
+  cup: () => import('./components/FantasyCup').then(m => ({ default: m.FantasyCup })),
+  pool: () => import('./components/PrizePool').then(m => ({ default: m.PrizePool })),
+  advisor: () => import('./components/AdvisorView').then(m => ({ default: m.AdvisorView })),
+  fame: () => import('./components/HallOfFame').then(m => ({ default: m.HallOfFame })),
+};
+
+const ClassicTable = lazy(TAB_LOADERS.classic);
+const H2HArena = lazy(TAB_LOADERS.h2h);
+const WeeklyWinners = lazy(TAB_LOADERS.weekly);
+const MonthlyAwards = lazy(TAB_LOADERS.monthly);
+const FantasyCup = lazy(TAB_LOADERS.cup);
+const PrizePool = lazy(TAB_LOADERS.pool);
+const AdvisorView = lazy(TAB_LOADERS.advisor);
+const HallOfFame = lazy(TAB_LOADERS.fame);
 
 const ADVISOR_MANAGER_KEY = 'htcv_fpl_advisor_manager';
 const THEME_STORAGE_KEY = 'htcv_fpl_theme';
@@ -102,6 +115,13 @@ export const App: React.FC = () => {
     } catch {
       /* private mode */
     }
+  }, []);
+
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500));
+    idle(() => {
+      for (const load of Object.values(TAB_LOADERS)) void load();
+    });
   }, []);
 
   useEffect(() => {
@@ -378,6 +398,13 @@ export const App: React.FC = () => {
           />
         )}
 
+        <Suspense
+          fallback={
+            <div className="py-24 text-center text-sm font-mono" style={{ color: 'var(--text-muted)' }}>
+              Đang tải...
+            </div>
+          }
+        >
         {activeTab === 'classic' && (
           <ClassicTable
             standings={liveClassicStandings}
@@ -448,6 +475,7 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'fame' && <HallOfFame />}
+        </Suspense>
       </main>
 
       {/* Manager Detail Deep-Dive Modal */}
