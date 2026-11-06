@@ -181,7 +181,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               <div className="bezel-core-lg relative overflow-hidden group">
                 <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#190d29]">
                   <img
-                    src="/assets/pl_stars_banner.jpg"
+                    src="/assets/pl_stars_banner.webp"
                     alt="Ngôi sao Ngoại hạng Anh và Cúp vô địch Premier League"
                     className="w-full h-full object-cover object-top transition-transform duration-700 ease-fluid group-hover:scale-[1.025]"
                   />
