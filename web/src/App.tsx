@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { FootballCursor } from './components/FootballCursor';
 import { StadiumBackground } from './components/StadiumBackground';
 import { Navbar, ThemeMode } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
@@ -11,6 +10,7 @@ import { MonthlyAwards } from './components/MonthlyAwards';
 import { FantasyCup } from './components/FantasyCup';
 import { HallOfFame } from './components/HallOfFame';
 import { AdvisorView } from './components/AdvisorView';
+import { AdvisorChat } from './components/AdvisorChat';
 import { PrizePool } from './components/PrizePool';
 import { ManagerModal } from './components/ManagerModal';
 
@@ -33,6 +33,7 @@ import {
 } from './services/liveStandings';
 
 import {
+  INITIAL_PLAYERS,
   INITIAL_DASHBOARD,
   INITIAL_CLASSIC_STANDINGS,
   INITIAL_H2H_STANDINGS,
@@ -50,26 +51,66 @@ import {
   LiveGwData,
 } from './types';
 
+const ADVISOR_MANAGER_KEY = 'htcv_fpl_advisor_manager';
+const THEME_STORAGE_KEY = 'htcv_fpl_theme';
+
+const readInitialTheme = (): ThemeMode => {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) === 'dusk' ? 'dusk' : 'fpl';
+  } catch {
+    return 'fpl';
+  }
+};
+
+const readInitialManagerId = (): number => {
+  try {
+    const saved = Number(localStorage.getItem(ADVISOR_MANAGER_KEY));
+    return INITIAL_PLAYERS.some(p => p.id === saved) ? saved : INITIAL_PLAYERS[0].id;
+  } catch {
+    return INITIAL_PLAYERS[0].id;
+  }
+};
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [initialAutoSyncing, setInitialAutoSyncing] = useState<boolean>(true);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
 
-  // 4 Design Themes: 'fpl' | 'dark' | 'light' | 'volt'
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('htcv_fpl_theme');
-    return (saved as ThemeMode) || 'fpl';
-  });
+  // 2-Mode Broadcast Studio System: 'fpl' (Premier Daylight Studio) | 'dusk' (Royal Velvet Dusk)
+  const [theme, setTheme] = useState<ThemeMode>(readInitialTheme);
+
+  // Persistent Global AI Assistant State (bottom-right popup + AdvisorView sync)
+  const [advisorManagerId, setAdvisorManagerId] = useState<number>(readInitialManagerId);
+  const [isAiOpen, setIsAiOpen] = useState<boolean>(false);
+  const [queuedAiPrompt, setQueuedAiPrompt] = useState<string | null>(null);
 
   const handleThemeChange = (newTheme: ThemeMode) => {
     setTheme(newTheme);
-    localStorage.setItem('htcv_fpl_theme', newTheme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+    } catch {
+      /* private mode */
+    }
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
+  const handleAdvisorManagerChange = useCallback((id: number) => {
+    setAdvisorManagerId(id);
+    try {
+      localStorage.setItem(ADVISOR_MANAGER_KEY, String(id));
+    } catch {
+      /* private mode */
+    }
+  }, []);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      /* private mode */
+    }
   }, [theme]);
 
   // Application Data States (settled data written by the backend)
@@ -82,6 +123,7 @@ export const App: React.FC = () => {
   // Provisional in-play data, refreshed on its own faster clock
   const [live, setLive] = useState<LiveGwData | null>(null);
   const [months, setMonths] = useState<MonthRange[]>(MONTH_RANGES);
+  const [seasonNextGw, setSeasonNextGw] = useState<number | null | undefined>(undefined);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
   // Load settled data from the Google Sheet Web App API
@@ -120,6 +162,15 @@ export const App: React.FC = () => {
     return payload;
   }, []);
 
+  const loadSeason = useCallback(async () => {
+    const season = await fetchSeasonInfo();
+    if (season) {
+      setSeasonNextGw(season.nextGw);
+      if (season.months.length) setMonths(season.months);
+    }
+    return season;
+  }, []);
+
   /**
    * Rebuild the settled tables when the backend reports a gameweek has just
    * finished. Opening the site therefore still pulls the newest data — but it
@@ -135,21 +186,19 @@ export const App: React.FC = () => {
       setIsSyncing(true);
       try {
         await triggerLiveSync();
-        await Promise.all([loadData(), loadLive()]);
+        await Promise.all([loadData(), loadLive(), loadSeason()]);
       } finally {
         setIsSyncing(false);
       }
     })();
-  }, [live?.settlementPending, loadData, loadLive]);
+  }, [live?.settlementPending, loadData, loadLive, loadSeason]);
 
-  // Initial load: settled tables first, then the live overlay on top.
+  // Initial load: settled tables, live overlay, and season calendar in parallel.
   useEffect(() => {
     const initApp = async () => {
       setInitialAutoSyncing(true);
       try {
-        await Promise.all([loadData(), loadLive()]);
-        const season = await fetchSeasonInfo();
-        if (season && season.months.length) setMonths(season.months);
+        await Promise.all([loadData(), loadLive(), loadSeason()]);
       } catch (err) {
         console.warn('Initial load finished with errors:', err);
       } finally {
@@ -158,7 +207,7 @@ export const App: React.FC = () => {
     };
 
     initApp();
-  }, [loadData, loadLive]);
+  }, [loadData, loadLive, loadSeason]);
 
   /**
    * Keep the live overlay moving while people are watching.
@@ -194,7 +243,7 @@ export const App: React.FC = () => {
     setIsSyncing(true);
     try {
       await triggerLiveSync();
-      await Promise.all([loadData(), loadLive()]);
+      await Promise.all([loadData(), loadLive(), loadSeason()]);
     } catch (err) {
       console.error('Sync failed:', err);
     } finally {
@@ -224,26 +273,38 @@ export const App: React.FC = () => {
     });
   }, [h2hStandings, live, liveClassicStandings]);
 
-  // The gameweek every tab lands on by default — no manual switching needed.
-  const currentGW = live?.gw
-    || (typeof dashboard.currentGW === 'number' ? dashboard.currentGW : dashboard.gwsCompleted || 1);
+  // The gameweek every standings/results tab lands on by default (settled or in-play).
+  const currentGW =
+    live?.gw ||
+    (typeof dashboard.currentGW === 'number' ? dashboard.currentGW : dashboard.gwsCompleted || 1);
   const currentMonthName = monthOfGw(currentGW, months).name;
   const isLiveNow = !!live?.isLive;
 
+  // The upcoming gameweek that AI Chat & Tactical Advisor advise for:
+  // 1. Official FPL `nextGw` from `?action=season` (e.g. GW10 when GW9 is in-play or completed)
+  // 2. Fallback before `season` resolves: if `currentGW` is already live or completed, target `currentGW + 1`
+  const upcomingGW: number | null =
+    seasonNextGw !== undefined
+      ? seasonNextGw
+      : isLiveNow || (dashboard.gwsCompleted || 0) >= currentGW
+      ? currentGW < 38
+        ? currentGW + 1
+        : null
+      : currentGW;
+
   return (
-    <div className="relative min-h-screen flex flex-col font-sans transition-colors duration-300" data-theme={theme}
+    <div
+      className="relative min-h-[100dvh] flex flex-col font-sans transition-colors duration-300 ease-out-strong"
+      data-theme={theme}
       style={{
         backgroundColor: 'var(--bg-app)',
-        color: 'var(--text-main)'
+        color: 'var(--text-main)',
       }}
     >
-      {/* ⚽ Compact 3D Football Cursor with Spinning Mini-Balls Trail */}
-      <FootballCursor />
-
-      {/* 🏟️ Stadium Atmosphere Background */}
+      {/* Calibrated Broadcast Atmosphere & Pitch Grid */}
       <StadiumBackground theme={theme} />
 
-      {/* Top Floating Navbar */}
+      {/* Detached Floating Fluid Island Navbar */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -252,43 +313,52 @@ export const App: React.FC = () => {
         lastUpdated={dashboard.lastUpdated}
         theme={theme}
         setTheme={handleThemeChange}
+        onOpenAi={() => setIsAiOpen(true)}
       />
 
-      {/* Data status bar: loading → live → offline fallback */}
+      {/* Detached Status Pill: loading -> live -> offline fallback */}
       {(initialAutoSyncing || isLiveNow || isOffline) && (
-        <div className="relative z-20 border-b py-1.5 px-4 text-center transition-colors"
-          style={{
-            background: 'linear-gradient(90deg, var(--bg-card), var(--bg-card-hover))',
-            borderColor: 'var(--border-highlight)'
-          }}
-        >
-          <p className="text-[11px] font-mono font-semibold flex items-center justify-center gap-2"
-            style={{ color: isOffline ? '#ff6b6b' : 'var(--accent-primary)' }}
+        <div className="relative z-20 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-3 flex justify-center">
+          <div
+            className="surface-well inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-[11px] font-mono font-medium tabular-nums"
+            style={{
+              color: isOffline ? 'var(--accent-tertiary)' : 'var(--accent-primary)',
+            }}
           >
-            <span className="w-1.5 h-1.5 rounded-full animate-ping"
-              style={{ backgroundColor: isOffline ? '#ff6b6b' : 'var(--accent-primary)' }} />
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse-soft flex-shrink-0"
+              style={{
+                backgroundColor: isOffline ? 'var(--accent-tertiary)' : 'var(--accent-primary)',
+              }}
+            />
             {initialAutoSyncing ? (
-              <span>⚡ Đang kéo dữ liệu FPL mới nhất về hệ thống...</span>
+              <span>Đang đồng bộ dữ liệu FPL mới nhất về hệ thống...</span>
             ) : isOffline ? (
-              <span>⚠️ Không kết nối được máy chủ dữ liệu — đang hiển thị bảng mẫu, số liệu chưa phải thực tế.</span>
+              <span>Không kết nối được máy chủ dữ liệu · Đang hiển thị bảng dự phòng, hệ thống sẽ tự kết nối lại.</span>
             ) : (
               <span>
-                🔴 LIVE — GW{live?.gw} đang diễn ra, bảng xếp hạng tự cập nhật
-                {live?.updatedAt ? ` (lúc ${new Date(live.updatedAt).toLocaleTimeString('vi-VN')})` : ''}
+                Trực tiếp GW{live?.gw} · Điểm số đang tự động cập nhật
+                {live?.updatedAt ? ` (${new Date(live.updatedAt).toLocaleTimeString('vi-VN')})` : ''}
               </span>
             )}
-          </p>
+          </div>
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
-        
-        {/* Superstars Hero Banner (Shown on Dashboard & overview) */}
+      {/* Main Content Area with Editorial Macro-Whitespace */}
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* Editorial Split + Z-Axis Broadcast Hero (Shown on Overview) */}
         {activeTab === 'dashboard' && (
           <HeroBanner
             dashboard={dashboard}
+            classicLeader={liveClassicStandings[0]}
+            h2hLeader={liveH2HStandings[0]}
+            upcomingGW={upcomingGW}
+            isLive={isLiveNow}
             onExploreClick={() => setActiveTab('classic')}
+            onOpenAi={() => setIsAiOpen(true)}
+            onOpenPool={() => setActiveTab('pool')}
+            onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}
 
@@ -304,7 +374,7 @@ export const App: React.FC = () => {
             isLive={isLiveNow}
             months={months}
             onSelectTab={setActiveTab}
-            onSelectPlayer={(id) => setSelectedPlayerId(id)}
+            onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}
 
@@ -314,7 +384,7 @@ export const App: React.FC = () => {
             currentGW={currentGW}
             isLive={isLiveNow}
             live={live}
-            onSelectPlayer={(id) => setSelectedPlayerId(id)}
+            onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}
 
@@ -324,7 +394,7 @@ export const App: React.FC = () => {
             currentGW={currentGW}
             isLive={isLiveNow}
             live={live}
-            onSelectPlayer={(id) => setSelectedPlayerId(id)}
+            onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}
 
@@ -335,7 +405,7 @@ export const App: React.FC = () => {
             currentGW={currentGW}
             isLive={isLiveNow}
             live={live}
-            onSelectPlayer={(id) => setSelectedPlayerId(id)}
+            onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}
 
@@ -349,13 +419,11 @@ export const App: React.FC = () => {
             isLive={isLiveNow}
             live={live}
             months={months}
-            onSelectPlayer={(id) => setSelectedPlayerId(id)}
+            onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}
 
-        {activeTab === 'cup' && (
-          <FantasyCup />
-        )}
+        {activeTab === 'cup' && <FantasyCup />}
 
         {activeTab === 'pool' && (
           <PrizePool
@@ -363,18 +431,23 @@ export const App: React.FC = () => {
             monthlyAwards={monthlyAwards}
             classicStandings={liveClassicStandings}
             h2hStandings={liveH2HStandings}
-            onSelectPlayer={(id) => setSelectedPlayerId(id)}
+            onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}
 
         {activeTab === 'advisor' && (
-          <AdvisorView />
+          <AdvisorView
+            managerId={advisorManagerId}
+            upcomingGW={upcomingGW}
+            onManagerChange={handleAdvisorManagerChange}
+            onOpenAiChat={prompt => {
+              if (prompt) setQueuedAiPrompt(prompt);
+              setIsAiOpen(true);
+            }}
+          />
         )}
 
-        {activeTab === 'fame' && (
-          <HallOfFame />
-        )}
-
+        {activeTab === 'fame' && <HallOfFame />}
       </main>
 
       {/* Manager Detail Deep-Dive Modal */}
@@ -384,22 +457,39 @@ export const App: React.FC = () => {
         classicStandings={liveClassicStandings}
         h2hStandings={liveH2HStandings}
         currentGW={currentGW}
+        onAskAi={id => {
+          handleAdvisorManagerChange(id);
+          setIsAiOpen(true);
+        }}
       />
 
-      {/* Footer (with pb-20 on mobile to clear mobile bottom navigation bar) */}
-      <footer className="relative z-10 w-full border-t backdrop-blur-md py-6 pb-24 md:pb-6 mt-12 transition-colors"
+      {/* Persistent Global Bottom-Right AI Assistant Popup */}
+      <AdvisorChat
+        isOpen={isAiOpen}
+        onOpenChange={setIsAiOpen}
+        managerId={advisorManagerId}
+        onManagerChange={handleAdvisorManagerChange}
+        upcomingGW={upcomingGW}
+        queuedPrompt={queuedAiPrompt}
+        onConsumePrompt={() => setQueuedAiPrompt(null)}
+        onOpenAdvisorTab={() => setActiveTab('advisor')}
+      />
+
+      {/* Editorial Footer (pb-28 on mobile clears floating bottom island dock + AI launcher) */}
+      <footer
+        className="relative z-10 w-full border-t py-12 md:py-16 pb-28 md:pb-16 mt-16 md:mt-24 transition-colors duration-300 ease-out-strong"
         style={{
-          backgroundColor: 'var(--bg-header)',
-          borderColor: 'var(--border-subtle)'
+          borderColor: 'var(--border-subtle)',
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center text-xs font-mono text-center"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-primary)' }} />
-            <span style={{ color: 'var(--text-main)' }}>HTCV Open League Season 2026-2027 • Official League Hub</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2.5" style={{ color: 'var(--text-secondary)' }}>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
+            <span>HTCV Open League · Season 2026-2027</span>
           </div>
+          <span style={{ color: 'var(--text-faint)' }}>
+            14 Managers · Classic & Head-to-Head Official Hub
+          </span>
         </div>
       </footer>
     </div>

@@ -4,6 +4,7 @@ import { PRIZE_STRUCTURE, INITIAL_PLAYERS } from '../data/initialData';
 import { WeeklyWinner, MonthlyAward, ClassicStanding, H2HStanding } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { isWinner, prizeShare } from '../services/prizes';
+import { Reveal } from './scroll-reveal';
 
 interface PrizePoolProps {
   weeklyWinners?: WeeklyWinner[];
@@ -27,24 +28,36 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
     // 1. Weekly Wins (50k pot, split evenly on a tie)
     const weeklyWins = weeklyWinners.filter(w => w.points > 0 && isWinner(w.winner, p.manager));
     const weeklyEarnings = weeklyWins.reduce(
-      (sum, w) => sum + prizeShare(w.winner, p.manager, w.prize || 50000), 0);
+      (sum, w) => sum + prizeShare(w.winner, p.manager, w.prize || 50000),
+      0,
+    );
 
     // 2. Monthly Classic Wins (100k pot, split evenly on a tie)
     const monthlyClassicWins = monthlyAwards.filter(m => m.classicPoints > 0 && isWinner(m.classicWinner, p.manager));
     const monthlyClassicEarnings = monthlyClassicWins.reduce(
-      (sum, m) => sum + prizeShare(m.classicWinner, p.manager, m.classicPrize || 100000), 0);
+      (sum, m) => sum + prizeShare(m.classicWinner, p.manager, m.classicPrize || 100000),
+      0,
+    );
 
     // 3. Monthly H2H Wins (100k pot, split evenly on a tie)
     const monthlyH2HWins = monthlyAwards.filter(m => m.h2hPoints > 0 && isWinner(m.h2hWinner, p.manager));
     const monthlyH2HEarnings = monthlyH2HWins.reduce(
-      (sum, m) => sum + prizeShare(m.h2hWinner, p.manager, m.h2hPrize || 100000), 0);
+      (sum, m) => sum + prizeShare(m.h2hWinner, p.manager, m.h2hPrize || 100000),
+      0,
+    );
 
     // 4. Cup & Season bonuses (if applicable)
     const cupEarnings = 0;
     const seasonClassicEarnings = 0;
     const seasonH2HEarnings = 0;
 
-    const totalWon = weeklyEarnings + monthlyClassicEarnings + monthlyH2HEarnings + cupEarnings + seasonClassicEarnings + seasonH2HEarnings;
+    const totalWon =
+      weeklyEarnings +
+      monthlyClassicEarnings +
+      monthlyH2HEarnings +
+      cupEarnings +
+      seasonClassicEarnings +
+      seasonH2HEarnings;
 
     const classicRecord = classicStandings.find(c => c.id === p.id);
     const h2hRecord = h2hStandings.find(h => h.id === p.id);
@@ -84,344 +97,406 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
   const topEarner = managerEarnings[0];
 
   return (
-    <div className="space-y-8">
-      
+    <div className="space-y-8 md:space-y-10">
       {/* Header Summary */}
-      <div className="glass-panel rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Wallet className="w-5 h-5" style={{ color: 'var(--accent-gold)' }} />
-            <h3 className="text-lg sm:text-xl font-display font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-              Bảng Vàng Tiền Thưởng & Cơ Cấu Giải Đấu 2026-2027
-            </h3>
-          </div>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            Thống kê chi tiết tiền thưởng thực nhận của 14 HLV được cập nhật trực tiếp tại thời điểm mở web.
-          </p>
-        </div>
-
-        {/* Balance Status */}
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 rounded-xl border text-right"
-            style={{
-              backgroundColor: 'var(--bg-card-hover)',
-              borderColor: 'var(--border-highlight)',
-            }}
-          >
-            <p className="text-[10px] uppercase font-mono" style={{ color: 'var(--text-faint)' }}>Tổng Quỹ Giải</p>
-            <p className="text-sm font-black font-mono" style={{ color: 'var(--accent-primary)' }}>7.000.000 VNĐ</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 💰 BẢNG XẾP HẠNG TIỀN THƯỞNG 14 HLV (PRIZE EARNINGS LEADERBOARD) */}
-      <div className="glass-panel rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl relative overflow-hidden">
-        
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b mb-6" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(255, 215, 0, 0.15)', color: 'var(--accent-gold)' }}
-            >
-              <Trophy className="w-5 h-5" />
+      <Reveal>
+        <div className="bezel-shell">
+          <div className="bezel-core p-5 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            <div className="space-y-2">
+              <div className="eyebrow-pill">
+                <Wallet className="w-3 h-3" strokeWidth={1.6} style={{ color: 'var(--accent-gold)' }} />
+                <span>14 HLV × 500.000 VNĐ · Mùa giải 2026-2027</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-display font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
+                Quỹ thưởng và phân bổ giải
+              </h3>
+              <p className="text-xs sm:text-sm max-w-2xl leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                Bảng thống kê tiền thưởng tích lũy của 14 HLV theo kết quả Nhất tuần, Nhất tháng Classic và Nhất tháng H2H đã chốt.
+              </p>
             </div>
-            <div>
-              <h4 className="text-base sm:text-lg font-display font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-                Xếp Hạng Tiền Thưởng Thực Nhận Của 14 HLV
-              </h4>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Xếp hạng theo tổng số tiền giải thưởng đã tích lũy đến hiện tại</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold"
-            style={{
-              backgroundColor: 'rgba(255, 215, 0, 0.12)',
-              borderColor: 'rgba(255, 215, 0, 0.3)',
-              color: 'var(--accent-gold)'
-            }}
-          >
-            <Coins className="w-4 h-4" />
-            <span>Đã Trao: {totalPrizeDistributed.toLocaleString('vi-VN')} đ / 7.000.000 đ</span>
-          </div>
-        </div>
-
-        {/* Top Earner Highlight Podium Card */}
-        <div className="rounded-2xl p-4 sm:p-5 border mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg"
-          style={{
-            backgroundColor: 'var(--bg-card-solid)',
-            borderColor: 'var(--border-highlight)'
-          }}
-        >
-          <div className="flex items-center gap-4 min-w-0">
-            <PlayerAvatar
-              name={topEarner?.manager || 'HLV Top 1'}
-              avatarUrl={topEarner?.avatarUrl}
-              clubLogoUrl={topEarner?.clubLogoUrl}
-              favoriteClub={topEarner?.favoriteClub}
-              rank={1}
-              size="lg"
-              showCrown={true}
-            />
-            <div className="min-w-0">
-              <span className="px-2 py-0.5 rounded-full text-black text-[10px] font-black uppercase font-mono"
-                style={{ backgroundColor: 'var(--accent-gold)' }}
-              >
-                👑 VUA TIỀN THƯỞNG HIỆN TẠI
-              </span>
-              <h5 className="text-lg sm:text-xl font-black font-display truncate mt-1" style={{ color: 'var(--text-main)' }}>
-                {topEarner?.manager}
-              </h5>
-              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                {topEarner?.team}
+            <div className="surface-well px-4 py-3 text-right flex-shrink-0">
+              <p className="text-[10px] uppercase tracking-widest font-mono" style={{ color: 'var(--text-faint)' }}>
+                Tổng quỹ giải đấu
+              </p>
+              <p className="text-base sm:text-lg font-bold font-mono tabular-nums" style={{ color: 'var(--accent-gold)' }}>
+                7.000.000 VNĐ
               </p>
             </div>
           </div>
-
-          <div className="text-right px-4 py-3 rounded-xl border w-full sm:w-auto"
-            style={{ backgroundColor: 'var(--bg-app)', borderColor: 'var(--border-subtle)' }}
-          >
-            <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-faint)' }}>Tổng Tiền Thưởng Đã Nhận</p>
-            <p className="text-xl sm:text-2xl font-black font-mono" style={{ color: 'var(--accent-gold)' }}>
-              {topEarner?.totalWon.toLocaleString('vi-VN')} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>VNĐ</span>
-            </p>
-          </div>
         </div>
+      </Reveal>
 
-        {/* 14 Managers Full Prize Table */}
-        <div className="overflow-x-auto scrollbar-thin rounded-xl border touch-scroll max-h-[580px]" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="md:hidden flex items-center justify-between px-3 py-1.5 border-b text-[10px] font-mono"
-            style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
-          >
-            <span>💰 Bảng Tiền Thưởng</span>
-            <span>👉 Vuốt ngang xem chi tiết</span>
-          </div>
-          <table className="w-full border-collapse text-left text-xs">
-            <thead className="font-mono text-[11px] sticky top-0 z-20 uppercase border-b"
-              style={{
-                backgroundColor: 'var(--table-head-bg)',
-                borderColor: 'var(--border-subtle)',
-                color: 'var(--text-muted)'
-              }}
+      {/* Prize Earnings Leaderboard */}
+      <Reveal delayMs={60}>
+        <div className="bezel-shell-lg">
+          <div className="bezel-core-lg p-5 sm:p-7 md:p-8">
+            <div
+              className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b mb-6"
+              style={{ borderColor: 'var(--border-subtle)' }}
             >
-              <tr>
-                <th className="py-2.5 sm:py-3 px-1.5 sm:px-3 w-10 sm:w-12 text-center sticky left-0 z-30 border-r"
-                  style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    backgroundColor: 'var(--accent-gold-soft)',
+                    color: 'var(--accent-gold)',
+                    boxShadow: 'inset 0 0 0 1px rgba(228, 191, 106, 0.28)',
+                  }}
                 >
-                  #
-                </th>
-                <th className="py-2.5 sm:py-3 px-2.5 sm:px-4 min-w-[135px] sm:min-w-[170px] sticky left-10 sm:left-12 z-30 border-r"
-                  style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
-                >
-                  HLV & Đội Bóng
-                </th>
-                <th className="py-2.5 sm:py-3 px-2 sm:px-3 text-center min-w-[80px] sm:min-w-[90px]">Nhất Tuần (50k)</th>
-                <th className="py-2.5 sm:py-3 px-2 sm:px-3 text-center min-w-[90px] sm:min-w-[100px]">Nhất Classic (100k)</th>
-                <th className="py-2.5 sm:py-3 px-2 sm:px-3 text-center min-w-[80px] sm:min-w-[90px]">Nhất H2H (100k)</th>
-                <th className="py-2.5 sm:py-3 px-2 sm:px-3 text-center min-w-[70px] sm:min-w-[80px]">Cup / Mùa</th>
-                <th className="py-2.5 sm:py-3 px-3 sm:px-4 text-right min-w-[110px] sm:min-w-[120px] font-black" style={{ color: 'var(--accent-gold)', backgroundColor: 'rgba(255, 215, 0, 0.08)' }}>
-                  TỔNG TIỀN THƯỞNG
-                </th>
-              </tr>
-            </thead>
+                  <Trophy className="w-4 h-4" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <h4 className="text-base sm:text-lg font-display font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
+                    Xếp hạng tiền thưởng thực nhận
+                  </h4>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Tự động chia đều giá trị giải thưởng khi có nhiều HLV đồng hạng nhất
+                  </p>
+                </div>
+              </div>
 
-            <tbody className="divide-y font-sans" style={{ borderColor: 'var(--border-subtle)' }}>
-              {managerEarnings.map((p, idx) => {
-                const rankNum = idx + 1;
-                const isRank1 = rankNum === 1;
-
-                return (
-                  <tr
-                    key={p.id}
-                    onClick={() => onSelectPlayer && onSelectPlayer(p.id)}
-                    className="interactive transition-colors cursor-pointer"
-                    style={{
-                      backgroundColor: isRank1 ? 'rgba(255, 215, 0, 0.08)' : undefined
-                    }}
-                  >
-                    <td className="py-2.5 sm:py-3 px-1.5 sm:px-3 text-center font-mono font-black sticky left-0 z-10 border-r"
-                      style={{
-                        backgroundColor: 'var(--bg-card-solid)',
-                        borderColor: 'var(--border-subtle)',
-                        color: isRank1 ? 'var(--accent-gold)' : rankNum === 2 ? 'var(--text-main)' : rankNum === 3 ? '#f97316' : 'var(--text-muted)'
-                      }}
-                    >
-                      {rankNum}
-                    </td>
-
-                    <td className="py-2.5 sm:py-3 px-2.5 sm:px-4 sticky left-10 sm:left-12 z-10 border-r min-w-[135px] sm:min-w-[170px]"
-                      style={{
-                        backgroundColor: 'var(--bg-card-solid)',
-                        borderColor: 'var(--border-subtle)',
-                      }}
-                    >
-                      <div className="flex items-center gap-2 sm:gap-2.5">
-                        <PlayerAvatar
-                          name={p.manager}
-                          avatarUrl={p.avatarUrl}
-                          clubLogoUrl={p.clubLogoUrl}
-                          favoriteClub={p.favoriteClub}
-                          rank={rankNum}
-                          size="xs"
-                        />
-                        <div className="min-w-0">
-                          <p className="font-bold truncate text-[11px] sm:text-sm font-display flex items-center gap-1 sm:gap-1.5" style={{ color: 'var(--text-main)' }}>
-                            {p.manager}
-                            {rankNum === 1 && <span title="Vua Tiền Thưởng" className="inline-flex flex-shrink-0"><Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 fill-[#ffd700] text-[#ffd700]" /></span>}
-                            {rankNum === 2 && <span title="Á Quân Tiền Thưởng" className="inline-flex flex-shrink-0"><Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 fill-[#e2e8f0] text-[#cbd5e1]" /></span>}
-                            {rankNum === 3 && <span title="Hạng 3 Tiền Thưởng" className="inline-flex flex-shrink-0"><Crown className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0 fill-[#ea580c] text-[#f97316]" /></span>}
-                          </p>
-                          <p className="text-[9px] sm:text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{p.team}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Weekly Wins */}
-                    <td className="py-3 px-3 text-center font-mono">
-                      {p.weeklyCount > 0 ? (
-                        <span className="font-bold px-2 py-0.5 rounded border"
-                          style={{
-                            backgroundColor: 'rgba(0, 255, 135, 0.1)',
-                            color: 'var(--accent-primary)',
-                            borderColor: 'rgba(0, 255, 135, 0.25)'
-                          }}
-                        >
-                          {p.weeklyCount} lần ({p.weeklyEarnings.toLocaleString('vi-VN')}đ)
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-faint)' }}>0</span>
-                      )}
-                    </td>
-
-                    {/* Monthly Classic Wins */}
-                    <td className="py-3 px-3 text-center font-mono">
-                      {p.monthlyClassicCount > 0 ? (
-                        <span className="font-bold px-2 py-0.5 rounded border"
-                          style={{
-                            backgroundColor: 'rgba(233, 0, 82, 0.1)',
-                            color: 'var(--accent-tertiary)',
-                            borderColor: 'rgba(233, 0, 82, 0.25)'
-                          }}
-                        >
-                          {p.monthlyClassicCount} lần ({p.monthlyClassicEarnings.toLocaleString('vi-VN')}đ)
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-faint)' }}>0</span>
-                      )}
-                    </td>
-
-                    {/* Monthly H2H Wins */}
-                    <td className="py-3 px-3 text-center font-mono">
-                      {p.monthlyH2HCount > 0 ? (
-                        <span className="font-bold px-2 py-0.5 rounded border"
-                          style={{
-                            backgroundColor: 'rgba(4, 245, 255, 0.1)',
-                            color: 'var(--accent-secondary)',
-                            borderColor: 'rgba(4, 245, 255, 0.25)'
-                          }}
-                        >
-                          {p.monthlyH2HCount} lần ({p.monthlyH2HEarnings.toLocaleString('vi-VN')}đ)
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-faint)' }}>0</span>
-                      )}
-                    </td>
-
-                    {/* Cup / Season */}
-                    <td className="py-3 px-3 text-center font-mono">
-                      {p.cupEarnings + p.seasonClassicEarnings + p.seasonH2HEarnings > 0 ? (
-                        <span className="font-bold" style={{ color: 'var(--accent-gold)' }}>
-                          {(p.cupEarnings + p.seasonClassicEarnings + p.seasonH2HEarnings).toLocaleString('vi-VN')}đ
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-faint)' }}>-</span>
-                      )}
-                    </td>
-
-                    {/* TOTAL PRIZE WON */}
-                    <td className="py-3 px-4 text-right font-mono font-black text-sm"
-                      style={{ color: 'var(--accent-gold)', backgroundColor: 'rgba(255, 215, 0, 0.05)' }}
-                    >
-                      {p.totalWon.toLocaleString('vi-VN')} <span className="text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>VNĐ</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-
-      {/* Breakdown Structure Table */}
-      <div className="glass-panel rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-4 border-b flex items-center justify-between"
-          style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
-        >
-          <h4 className="text-sm font-display font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-            Quy Định & Cơ Cấu Phân Bổ Toàn Bộ Giải Thưởng
-          </h4>
-        </div>
-
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full border-collapse text-left text-xs">
-            <thead className="font-mono text-[11px] uppercase border-b"
-              style={{
-                backgroundColor: 'var(--table-head-bg)',
-                borderColor: 'var(--border-subtle)',
-                color: 'var(--text-muted)'
-              }}
-            >
-              <tr>
-                <th className="py-3 px-4">Hạng Mục Giải Thưởng</th>
-                <th className="py-3 px-3 text-right">Định Mức</th>
-                <th className="py-3 px-3 text-center">Số Lượng</th>
-                <th className="py-3 px-4 text-right">Tổng Tiền</th>
-                <th className="py-3 px-4">Ghi Chú Quy Chế</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y font-sans" style={{ borderColor: 'var(--border-subtle)' }}>
-              {PRIZE_STRUCTURE.prizes.map((p, idx) => (
-                <tr key={idx} className="hover:bg-white/5 transition-colors">
-                  <td className="py-3 px-4 font-bold font-display" style={{ color: 'var(--text-main)' }}>
-                    {p.title}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono font-semibold" style={{ color: 'var(--accent-secondary)' }}>
-                    {p.amount.toLocaleString('vi-VN')} đ
-                  </td>
-                  <td className="py-3 px-3 text-center font-mono" style={{ color: 'var(--text-muted)' }}>
-                    {p.count}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-black" style={{ color: 'var(--accent-primary)' }}>
-                    {p.total.toLocaleString('vi-VN')} đ
-                  </td>
-                  <td className="py-3 px-4 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                    {p.desc}
-                  </td>
-                </tr>
-              ))}
-              
-              {/* Summary Row */}
-              <tr className="font-bold border-t-2"
+              <div
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold tabular-nums"
                 style={{
-                  backgroundColor: 'var(--bg-card-solid)',
-                  borderColor: 'var(--border-highlight)'
+                  backgroundColor: 'var(--accent-gold-soft)',
+                  color: 'var(--accent-gold)',
+                  boxShadow: 'inset 0 0 0 1px rgba(228, 191, 106, 0.28)',
                 }}
               >
-                <td className="py-3 px-4 uppercase font-display" colSpan={3} style={{ color: 'var(--text-main)' }}>
-                  TỔNG CỘNG CHI PHÍ GIẢI THƯỞNG
-                </td>
-                <td className="py-3 px-4 text-right font-mono font-black text-base" style={{ color: 'var(--accent-gold)' }}>
-                  {totalExpenses.toLocaleString('vi-VN')} đ
-                </td>
-                <td className="py-3 px-4 text-xs font-mono font-bold" style={{ color: 'var(--accent-primary)' }}>
-                  100% Cân đối quỹ
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+                <Coins className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span>Đã giải ngân: {totalPrizeDistributed.toLocaleString('vi-VN')} đ / 7.000.000 đ</span>
+              </div>
+            </div>
 
+            {/* Top Earner Highlight Podium Card */}
+            <div
+              onClick={() => topEarner?.id && onSelectPlayer && onSelectPlayer(topEarner.id)}
+              className="podium-1 rounded-2xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer transition-[transform,box-shadow] duration-200 ease-out-strong hover:-translate-y-0.5"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <PlayerAvatar
+                  name={topEarner?.manager || 'HLV Top 1'}
+                  avatarUrl={topEarner?.avatarUrl}
+                  clubLogoUrl={topEarner?.clubLogoUrl}
+                  favoriteClub={topEarner?.favoriteClub}
+                  rank={1}
+                  size="lg"
+                  showCrown={true}
+                />
+                <div className="min-w-0">
+                  <span
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider font-mono"
+                    style={{ backgroundColor: 'var(--accent-gold-soft)', color: 'var(--accent-gold)' }}
+                  >
+                    <Crown className="w-3 h-3" strokeWidth={1.6} />
+                    <span>Dẫn đầu tiền thưởng</span>
+                  </span>
+                  <h5 className="text-lg sm:text-xl font-bold font-display truncate mt-1" style={{ color: 'var(--text-main)' }}>
+                    {topEarner?.manager}
+                  </h5>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                    {topEarner?.team}
+                  </p>
+                </div>
+              </div>
+
+              <div className="surface-well px-4 py-3 text-right w-full sm:w-auto">
+                <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>
+                  Tổng thưởng tích lũy
+                </p>
+                <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums" style={{ color: 'var(--accent-gold)' }}>
+                  {topEarner?.totalWon.toLocaleString('vi-VN')}{' '}
+                  <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>VNĐ</span>
+                </p>
+              </div>
+            </div>
+
+            {/* 14 Managers Full Prize Table */}
+            <div
+              className="overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
+              style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
+            >
+              <div
+                className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[10px] font-mono"
+                style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
+              >
+                <span>Bảng tiền thưởng 14 HLV</span>
+                <span>Vuốt ngang xem chi tiết</span>
+              </div>
+              <table className="w-full border-collapse text-left text-xs tabular-nums">
+                <thead
+                  className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider border-b"
+                  style={{
+                    backgroundColor: 'var(--table-head-bg)',
+                    borderColor: 'var(--border-subtle)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <tr>
+                    <th
+                      className="py-3 px-2 sm:px-3 w-10 sm:w-12 text-center sticky left-0 z-30 border-r"
+                      style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
+                    >
+                      #
+                    </th>
+                    <th
+                      className="py-3 px-2.5 sm:px-4 min-w-[140px] sm:min-w-[180px] sticky left-10 sm:left-12 z-30 border-r"
+                      style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
+                    >
+                      HLV & Đội bóng
+                    </th>
+                    <th className="py-3 px-2.5 sm:px-3 text-center min-w-[95px]">Nhất tuần (50k)</th>
+                    <th className="py-3 px-2.5 sm:px-3 text-center min-w-[105px]">Classic tháng (100k)</th>
+                    <th className="py-3 px-2.5 sm:px-3 text-center min-w-[95px]">H2H tháng (100k)</th>
+                    <th className="py-3 px-2.5 sm:px-3 text-center min-w-[85px]">Cúp / Mùa</th>
+                    <th
+                      className="py-3 px-3 sm:px-4 text-right min-w-[125px] font-bold"
+                      style={{ color: 'var(--accent-gold)', backgroundColor: 'var(--accent-gold-soft)' }}
+                    >
+                      Tổng tiền thưởng
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y font-sans" style={{ borderColor: 'var(--border-subtle)' }}>
+                  {managerEarnings.map((p, idx) => {
+                    const rankNum = idx + 1;
+                    const isRank1 = rankNum === 1 && p.totalWon > 0;
+
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => onSelectPlayer && onSelectPlayer(p.id)}
+                        className="transition-colors duration-150 cursor-pointer"
+                        style={{
+                          backgroundColor: isRank1 ? 'var(--accent-gold-soft)' : undefined,
+                        }}
+                      >
+                        <td
+                          className="py-3 px-2 sm:px-3 text-center font-mono font-bold sticky left-0 z-10 border-r"
+                          style={{
+                            backgroundColor: 'var(--bg-card-solid)',
+                            borderColor: 'var(--border-subtle)',
+                            color:
+                              rankNum === 1
+                                ? 'var(--accent-gold)'
+                                : rankNum === 2
+                                ? 'var(--accent-silver)'
+                                : rankNum === 3
+                                ? 'var(--accent-bronze)'
+                                : 'var(--text-muted)',
+                          }}
+                        >
+                          {rankNum}
+                        </td>
+
+                        <td
+                          className="py-3 px-2.5 sm:px-4 sticky left-10 sm:left-12 z-10 border-r min-w-[140px] sm:min-w-[180px]"
+                          style={{
+                            backgroundColor: 'var(--bg-card-solid)',
+                            borderColor: 'var(--border-subtle)',
+                          }}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <PlayerAvatar
+                              name={p.manager}
+                              avatarUrl={p.avatarUrl}
+                              clubLogoUrl={p.clubLogoUrl}
+                              favoriteClub={p.favoriteClub}
+                              rank={rankNum}
+                              size="xs"
+                            />
+                            <div className="min-w-0">
+                              <p
+                                className="font-semibold truncate text-xs sm:text-sm font-display flex items-center gap-1.5"
+                                style={{ color: 'var(--text-main)' }}
+                              >
+                                <span className="truncate">{p.manager}</span>
+                                {rankNum <= 3 && (
+                                  <Crown
+                                    className="w-3 h-3 flex-shrink-0"
+                                    strokeWidth={1.6}
+                                    style={{
+                                      color:
+                                        rankNum === 1
+                                          ? 'var(--accent-gold)'
+                                          : rankNum === 2
+                                          ? 'var(--accent-silver)'
+                                          : 'var(--accent-bronze)',
+                                    }}
+                                  />
+                                )}
+                              </p>
+                              <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                                {p.team}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Weekly Wins */}
+                        <td className="py-3 px-3 text-center font-mono">
+                          {p.weeklyCount > 0 ? (
+                            <span
+                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[11px]"
+                              style={{
+                                backgroundColor: 'var(--accent-primary-soft)',
+                                color: 'var(--accent-primary)',
+                              }}
+                            >
+                              {p.weeklyCount} lần ({p.weeklyEarnings.toLocaleString('vi-VN')}đ)
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-faint)' }}>0</span>
+                          )}
+                        </td>
+
+                        {/* Monthly Classic Wins */}
+                        <td className="py-3 px-3 text-center font-mono">
+                          {p.monthlyClassicCount > 0 ? (
+                            <span
+                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[11px]"
+                              style={{
+                                backgroundColor: 'var(--accent-tertiary-soft)',
+                                color: 'var(--accent-tertiary)',
+                              }}
+                            >
+                              {p.monthlyClassicCount} lần ({p.monthlyClassicEarnings.toLocaleString('vi-VN')}đ)
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-faint)' }}>0</span>
+                          )}
+                        </td>
+
+                        {/* Monthly H2H Wins */}
+                        <td className="py-3 px-3 text-center font-mono">
+                          {p.monthlyH2HCount > 0 ? (
+                            <span
+                              className="inline-block font-semibold px-2.5 py-0.5 rounded-full text-[11px]"
+                              style={{
+                                backgroundColor: 'var(--accent-secondary-soft)',
+                                color: 'var(--accent-secondary)',
+                              }}
+                            >
+                              {p.monthlyH2HCount} lần ({p.monthlyH2HEarnings.toLocaleString('vi-VN')}đ)
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-faint)' }}>0</span>
+                          )}
+                        </td>
+
+                        {/* Cup / Season */}
+                        <td className="py-3 px-3 text-center font-mono">
+                          {p.cupEarnings + p.seasonClassicEarnings + p.seasonH2HEarnings > 0 ? (
+                            <span className="font-semibold" style={{ color: 'var(--accent-gold)' }}>
+                              {(p.cupEarnings + p.seasonClassicEarnings + p.seasonH2HEarnings).toLocaleString('vi-VN')}đ
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-faint)' }}>-</span>
+                          )}
+                        </td>
+
+                        {/* TOTAL PRIZE WON */}
+                        <td
+                          className="py-3 px-3 sm:px-4 text-right font-mono font-bold text-sm"
+                          style={{ color: 'var(--accent-gold)', backgroundColor: 'var(--accent-gold-soft)' }}
+                        >
+                          {p.totalWon.toLocaleString('vi-VN')}{' '}
+                          <span className="text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>
+                            VNĐ
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </Reveal>
+
+      {/* Breakdown Structure Table */}
+      <Reveal delayMs={110}>
+        <div className="bezel-shell">
+          <div className="bezel-core overflow-hidden">
+            <div
+              className="px-5 py-4 border-b flex items-center justify-between"
+              style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
+            >
+              <h4 className="text-sm sm:text-base font-display font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
+                Cơ cấu phân bổ toàn bộ quỹ thưởng
+              </h4>
+              <span className="text-[11px] font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                10 hạng mục
+              </span>
+            </div>
+
+            <div className="overflow-x-auto touch-scroll">
+              <table className="w-full border-collapse text-left text-xs tabular-nums">
+                <thead
+                  className="font-mono text-[10px] uppercase tracking-wider border-b"
+                  style={{
+                    backgroundColor: 'var(--table-head-bg)',
+                    borderColor: 'var(--border-subtle)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <tr>
+                    <th className="py-3 px-5">Hạng mục giải thưởng</th>
+                    <th className="py-3 px-3 text-right">Định mức</th>
+                    <th className="py-3 px-3 text-center">Số lượng</th>
+                    <th className="py-3 px-4 text-right">Thành tiền</th>
+                    <th className="py-3 px-5">Ghi chú quy chế</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y font-sans" style={{ borderColor: 'var(--border-subtle)' }}>
+                  {PRIZE_STRUCTURE.prizes.map((p, idx) => (
+                    <tr key={idx} className="transition-colors duration-150">
+                      <td className="py-3.5 px-5 font-semibold font-display" style={{ color: 'var(--text-main)' }}>
+                        {p.title}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono font-semibold" style={{ color: 'var(--accent-secondary)' }}>
+                        {p.amount.toLocaleString('vi-VN')} đ
+                      </td>
+                      <td className="py-3.5 px-3 text-center font-mono" style={{ color: 'var(--text-muted)' }}>
+                        {p.count}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold" style={{ color: 'var(--accent-primary)' }}>
+                        {p.total.toLocaleString('vi-VN')} đ
+                      </td>
+                      <td className="py-3.5 px-5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {p.desc}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* Summary Row */}
+                  <tr
+                    className="font-bold border-t"
+                    style={{
+                      backgroundColor: 'var(--bg-card-solid)',
+                      borderColor: 'var(--border-highlight)',
+                    }}
+                  >
+                    <td className="py-4 px-5 uppercase tracking-wider font-display text-xs" colSpan={3} style={{ color: 'var(--text-main)' }}>
+                      Tổng cộng ngân sách giải thưởng
+                    </td>
+                    <td className="py-4 px-4 text-right font-mono font-bold text-base" style={{ color: 'var(--accent-gold)' }}>
+                      {totalExpenses.toLocaleString('vi-VN')} đ
+                    </td>
+                    <td className="py-4 px-5 text-xs font-mono font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                      100% cân đối quỹ thu
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </Reveal>
     </div>
   );
 };

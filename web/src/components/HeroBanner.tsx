@@ -1,250 +1,335 @@
 import React from 'react';
-import { Trophy, Calendar, Zap, Crown, Flame, Sparkles } from 'lucide-react';
-import { LeagueDashboardData } from '../types';
+import { ArrowUpRight, Trophy, Sparkles, Swords } from 'lucide-react';
+import { ClassicStanding, H2HStanding, LeagueDashboardData } from '../types';
+import { PlayerAvatar } from './PlayerAvatar';
+import { Reveal } from './scroll-reveal';
 
 interface HeroBannerProps {
   dashboard: LeagueDashboardData;
+  classicLeader?: ClassicStanding;
+  h2hLeader?: H2HStanding;
+  upcomingGW?: number | null;
+  isLive?: boolean;
   onExploreClick?: () => void;
+  onOpenAi?: () => void;
+  onOpenPool?: () => void;
+  onSelectPlayer?: (id: number) => void;
 }
 
-export const HeroBanner: React.FC<HeroBannerProps> = ({ dashboard }) => {
+export const HeroBanner: React.FC<HeroBannerProps> = ({
+  dashboard,
+  classicLeader,
+  h2hLeader,
+  upcomingGW = null,
+  isLive = false,
+  onExploreClick,
+  onOpenAi,
+  onOpenPool,
+  onSelectPlayer,
+}) => {
+  const gwNum = typeof dashboard.currentGW === 'number' ? dashboard.currentGW : null;
+  const gwLabel = gwNum ? `Gameweek ${gwNum}` : String(dashboard.currentGW || 'Gameweek 1');
+  const roundSettled = !isLive && gwNum !== null && (dashboard.gwsCompleted || 0) >= gwNum;
+
   return (
-    <div className="w-full space-y-4 mb-8">
-      
-      {/* 🌟 1. HERO VISUAL SHOWCASE: 100% Full Unobstructed Superstars & Premier League Trophy */}
-      <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl border shadow-2xl group"
-        style={{
-          backgroundColor: 'var(--bg-card-solid)',
-          borderColor: 'var(--border-subtle)'
-        }}
-      >
-        <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] md:h-[340px] lg:h-[380px] overflow-hidden bg-slate-950">
-          <img
-            src="/assets/pl_stars_banner.jpg"
-            alt="Premier League Superstars & Trophy: Haaland, Palmer, Saka, Bruno, Rice, Semenyo, Rogers, Isak, Thiago, Porro, Pickford"
-            className="w-full h-full object-cover object-center scale-100 group-hover:scale-[1.015] transition-transform duration-700 ease-out"
-          />
-
-          {/* Very Subtle Edge Glow Vignette (Preserves complete visibility of Haaland & Trophy on left) */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
-
-          {/* Floating Top Header Badges (Positioned cleanly at top corners without blocking any faces/trophy) */}
-          <div className="absolute top-3 sm:top-4 inset-x-3 sm:inset-x-5 flex items-center justify-between pointer-events-auto z-10">
-            
-            {/* Live GW Badge */}
-            <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border shadow-lg text-xs font-mono font-bold"
+    <Reveal className="pt-2 pb-10 md:pt-6 md:pb-16">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+        {/* LEFT (6 COLS): Open Architectural Editorial Typography + Island CTAs + Metric Strip */}
+        <div className="lg:col-span-6 flex flex-col items-start">
+          {/* Eyebrow Kicker */}
+          <div className="flex items-center gap-2 flex-wrap mb-5">
+            <span className="eyebrow-pill">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isLive ? 'animate-pulse-soft' : ''}`}
+                style={{
+                  backgroundColor: isLive ? 'var(--accent-tertiary)' : 'var(--accent-primary)',
+                }}
+              />
+              <span>
+                {isLive
+                  ? `Trực tiếp ${gwLabel}`
+                  : roundSettled && upcomingGW
+                  ? `GW${gwNum} đã chốt · Sắp đá GW${upcomingGW}`
+                  : gwLabel}
+              </span>
+            </span>
+            <span
+              className="text-[11px] font-mono font-medium px-2.5 py-1 rounded-full"
               style={{
-                borderColor: 'var(--border-highlight)',
-                color: 'var(--accent-primary)'
+                color: 'var(--text-muted)',
+                backgroundColor: 'var(--bg-tray)',
               }}
             >
-              <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: 'var(--accent-primary)' }} />
-              <span className="uppercase tracking-wider">{dashboard.currentGW}</span>
-            </div>
+              Season {dashboard.season || '2026/27'} · 14 HLV
+            </span>
+          </div>
 
-            {/* Total Prize Pool Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-black/65 backdrop-blur-md border shadow-lg font-mono text-xs font-black"
-              style={{
-                borderColor: 'var(--accent-gold)',
-                color: 'var(--accent-gold)'
-              }}
+          {/* Monumental Display Headline with Editorial Italic Contrast */}
+          <h1
+            className="text-4xl sm:text-5xl xl:text-[3.55rem] font-display font-extrabold tracking-[-0.038em] leading-[1.05]"
+            style={{ color: 'var(--text-main)' }}
+          >
+            Đấu trường Ngoại hạng{' '}
+            <span
+              className="block mt-1 font-editorial italic font-semibold tracking-[-0.02em]"
+              style={{ color: 'var(--accent-primary)' }}
             >
-              <Trophy className="w-4 h-4 fill-current" />
-              <span>TỔNG QUỸ: 7.000.000 VNĐ</span>
-            </div>
+              HTCV Open 26/27.
+            </span>
+          </h1>
 
+          {/* Concise Plain-Speech Lead (Max 52ch) */}
+          <p
+            className="text-sm sm:text-[15px] mt-4 max-w-[52ch] leading-[1.65]"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            14 HLV tranh tài xuyên suốt 38 vòng Premier League trên hai bảng độc lập Classic và Head-to-Head. Điểm số trực tiếp, quyền thay người tự động và tiền thưởng từng chặng được đồng bộ ngay khi trận đấu khép lại.
+          </p>
+
+          {/* Dual Tactile Island CTAs */}
+          <div className="flex items-center gap-3 flex-wrap mt-7">
+            {onExploreClick && (
+              <button type="button" onClick={onExploreClick} className="btn-island group">
+                <span>Bảng xếp hạng toàn mùa</span>
+                <span className="btn-island-icon">
+                  <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.9} />
+                </span>
+              </button>
+            )}
+            {onOpenAi && (
+              <button type="button" onClick={onOpenAi} className="btn-island-ghost group">
+                <span>Hỏi Trợ lý AI</span>
+                <span className="btn-island-icon">
+                  <Sparkles className="w-3.5 h-3.5" strokeWidth={1.7} />
+                </span>
+              </button>
+            )}
           </div>
 
-          {/* Floating Bottom Subtle Watermark */}
-          <div className="absolute bottom-3 left-4 hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[11px] font-mono text-slate-300">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>HTCV Official Season 2026-2027</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 🏆 2. TOURNAMENT INFO & PRIZE STRUCTURE COMMAND CENTER */}
-      <div className="glass-panel rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl relative overflow-hidden">
-        
-        {/* Main Title & Tournament Info Header */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b"
-          style={{ borderColor: 'var(--border-subtle)' }}
-        >
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black uppercase tracking-wider font-mono text-white shadow-sm"
-                style={{ backgroundColor: 'var(--accent-tertiary)' }}
+          {/* Open Architectural 4-Metric Strip (Zero Card Bloat) */}
+          <div
+            className="w-full grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5 pt-6 mt-8"
+            style={{ borderTop: '1px solid var(--border-outer)' }}
+          >
+            <button
+              type="button"
+              onClick={onOpenPool}
+              className="pressable text-left group"
+            >
+              <p
+                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight flex items-center gap-1"
+                style={{ color: 'var(--text-main)' }}
               >
-                Official 2026-2027
-              </span>
-              <span className="text-xs font-mono font-bold" style={{ color: 'var(--text-muted)' }}>
-                14 HLV Tranh Tài • 38 Vòng Đấu Kịch Tính
-              </span>
+                <span>7,0M</span>
+                <ArrowUpRight
+                  className="w-3.5 h-3.5 opacity-60 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  strokeWidth={1.7}
+                  style={{ color: 'var(--accent-primary)' }}
+                />
+              </p>
+              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Quỹ thưởng VNĐ
+              </p>
+            </button>
+
+            <div>
+              <p
+                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                50K
+              </p>
+              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Nhất vòng × 38
+              </p>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-black leading-tight tracking-tight"
-              style={{ color: 'var(--text-main)' }}
-            >
-              ĐẤU TRƯỜNG <span style={{ color: 'var(--accent-primary)' }}>HTCV OPEN LEAGUE</span>
-            </h2>
-
-            <p className="text-xs sm:text-sm mt-1.5 font-normal leading-relaxed"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              Giải đấu Fantasy Ngoại hạng Anh thường niên quy tụ 14 HLV hàng đầu. Tranh tài song song 2 mặt trận Classic & H2H League với 38 vòng đấu đỉnh cao.
-            </p>
-          </div>
-
-          {/* Quick Format Pill */}
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border flex-shrink-0"
-            style={{
-              backgroundColor: 'var(--bg-card-solid)',
-              borderColor: 'var(--border-subtle)'
-            }}
-          >
-            <Flame className="w-5 h-5" style={{ color: 'var(--accent-tertiary)' }} />
             <div>
-              <p className="text-[10px] uppercase font-mono font-bold" style={{ color: 'var(--text-faint)' }}>Thể thức thi đấu</p>
-              <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Song song Classic & H2H</p>
+              <p
+                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight"
+                style={{ color: 'var(--accent-secondary)' }}
+              >
+                200K
+              </p>
+              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Nhất tháng × 10
+              </p>
+            </div>
+
+            <div>
+              <p
+                className="text-xl sm:text-2xl font-stats font-extrabold tabular-nums tracking-tight"
+                style={{ color: 'var(--text-main)' }}
+              >
+                {dashboard.gwsCompleted || 0}
+                <span className="text-sm font-normal" style={{ color: 'var(--text-faint)' }}>
+                  /38
+                </span>
+              </p>
+              <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Vòng đã hoàn tất
+              </p>
             </div>
           </div>
         </div>
 
-        {/* 4 Key Prize Cards Grid (High Contrast & Perfectly Styled in All 4 Themes) */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 pt-6">
-          
-          {/* Card 1: Nhất Vòng */}
-          <div className="rounded-2xl p-3.5 sm:p-4 border transition-all shadow-sm flex flex-col justify-between"
-            style={{
-              backgroundColor: 'var(--bg-card-solid)',
-              borderColor: 'var(--border-subtle)'
-            }}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                  <Zap className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
-                  Nhất Vòng
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
-                  style={{
-                    backgroundColor: 'rgba(0, 255, 135, 0.08)',
-                    borderColor: 'rgba(0, 255, 135, 0.25)',
-                    color: 'var(--accent-primary)'
-                  }}
-                >
-                  38 Giải
-                </span>
-              </div>
-              <p className="text-base sm:text-xl font-black font-mono" style={{ color: 'var(--accent-primary)' }}>
-                50.000đ <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>/ GW</span>
-              </p>
-            </div>
-            <p className="text-[10px] font-mono mt-2 pt-2 border-t" style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-faint)' }}>
-              Tổng thưởng 1.900.000 VNĐ
-            </p>
-          </div>
+        {/* RIGHT (6 COLS): Double-Bezel Broadcast Showcase + Z-Axis Overlapping Live Leaders */}
+        <div className="lg:col-span-6">
+          <div className="relative">
+            {/* Primary Superstar Broadcast Frame */}
+            <div className="bezel-shell-lg transition-transform duration-500 ease-fluid md:hover:-translate-y-0.5">
+              <div className="bezel-core-lg relative overflow-hidden group">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#190d29]">
+                  <img
+                    src="/assets/pl_stars_banner.jpg"
+                    alt="Ngôi sao Ngoại hạng Anh và Cúp vô địch Premier League"
+                    className="w-full h-full object-cover object-top transition-transform duration-700 ease-fluid group-hover:scale-[1.025]"
+                  />
+                  {/* Subtle Top & Bottom Studio Scrim */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background:
+                        'linear-gradient(180deg, rgba(23,11,38,0.34) 0%, rgba(23,11,38,0.02) 45%, rgba(23,11,38,0.68) 100%)',
+                    }}
+                  />
 
-          {/* Card 2: Nhất Tháng */}
-          <div className="rounded-2xl p-3.5 sm:p-4 border transition-all shadow-sm flex flex-col justify-between"
-            style={{
-              backgroundColor: 'var(--bg-card-solid)',
-              borderColor: 'var(--border-subtle)'
-            }}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                  <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--accent-secondary)' }} />
-                  Nhất Tháng
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
-                  style={{
-                    backgroundColor: 'rgba(4, 245, 255, 0.08)',
-                    borderColor: 'rgba(4, 245, 255, 0.25)',
-                    color: 'var(--accent-secondary)'
-                  }}
-                >
-                  10 Tháng
-                </span>
-              </div>
-              <p className="text-base sm:text-xl font-black font-mono" style={{ color: 'var(--accent-secondary)' }}>
-                200.000đ <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>/ Tháng</span>
-              </p>
-            </div>
-            <p className="text-[10px] font-mono mt-2 pt-2 border-t" style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-faint)' }}>
-              Classic 100k + H2H 100k (2.0M)
-            </p>
-          </div>
+                  {/* Top Broadcast Identifiers */}
+                  <div className="absolute top-3.5 inset-x-3.5 sm:top-4 sm:inset-x-4 flex items-center justify-between gap-2 z-10">
+                    <span
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-semibold uppercase tracking-[0.14em] backdrop-blur-md"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        color: '#38003c',
+                        boxShadow: '0 4px 14px rgba(23, 11, 38, 0.18)',
+                      }}
+                    >
+                      <Trophy className="w-3 h-3" strokeWidth={1.8} style={{ color: '#047857' }} />
+                      <span>Premier League Hub</span>
+                    </span>
 
-          {/* Card 3: Vô Địch Cả Mùa */}
-          <div className="rounded-2xl p-3.5 sm:p-4 border transition-all shadow-sm flex flex-col justify-between"
-            style={{
-              backgroundColor: 'var(--bg-card-solid)',
-              borderColor: 'var(--border-subtle)'
-            }}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                  <Trophy className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
-                  Vô Địch Cả Mùa
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
-                  style={{
-                    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-                    borderColor: 'rgba(255, 215, 0, 0.25)',
-                    color: 'var(--accent-gold)'
-                  }}
-                >
-                  2 Mặt Trận
-                </span>
+                    <span
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-medium backdrop-blur-md"
+                      style={{
+                        backgroundColor: 'rgba(23, 11, 38, 0.68)',
+                        color: '#f8f7fc',
+                        boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.18)',
+                      }}
+                    >
+                      #132688 · #132702
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p className="text-base sm:text-xl font-black font-mono" style={{ color: 'var(--accent-gold)' }}>
-                800.000đ <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>/ Giải</span>
-              </p>
             </div>
-            <p className="text-[10px] font-mono mt-2 pt-2 border-t" style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-faint)' }}>
-              Top 1, 2, 3 Classic & H2H (3.0M)
-            </p>
-          </div>
 
-          {/* Card 4: Fantasy Cup */}
-          <div className="rounded-2xl p-3.5 sm:p-4 border transition-all shadow-sm flex flex-col justify-between"
-            style={{
-              backgroundColor: 'var(--bg-card-solid)',
-              borderColor: 'var(--border-subtle)'
-            }}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                  <Crown className="w-3.5 h-3.5" style={{ color: 'var(--accent-tertiary)' }} />
-                  Fantasy Cup
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
-                  style={{
-                    backgroundColor: 'rgba(233, 0, 82, 0.08)',
-                    borderColor: 'rgba(233, 0, 82, 0.25)',
-                    color: 'var(--accent-tertiary)'
-                  }}
-                >
-                  GW36 - GW38
-                </span>
+            {/* Z-Axis Overlapping Live Leader Cards (Collapses cleanly below 768px) */}
+            <div className="mt-3.5 md:-mt-7 md:mx-4 relative z-20 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Classic #1 Floating Card */}
+              <div
+                onClick={() => classicLeader && onSelectPlayer?.(classicLeader.id)}
+                className="bezel-shell bezel-interactive cursor-pointer"
+                style={{ boxShadow: '0 0 0 1px var(--border-outer), var(--shadow-float)' }}
+              >
+                <div className="bezel-core p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PlayerAvatar
+                      name={classicLeader?.manager || 'HLV #1'}
+                      avatarUrl={classicLeader?.avatarUrl}
+                      clubLogoUrl={classicLeader?.clubLogoUrl}
+                      favoriteClub={classicLeader?.favoriteClub}
+                      rank={1}
+                      size="md"
+                      showClubBadge
+                    />
+                    <div className="min-w-0">
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold uppercase tracking-wider"
+                        style={{ color: 'var(--accent-gold)' }}
+                      >
+                        <Trophy className="w-3 h-3" strokeWidth={1.7} />
+                        <span>Đỉnh bảng Classic</span>
+                      </span>
+                      <p
+                        className="text-sm font-display font-bold truncate mt-0.5"
+                        style={{ color: 'var(--text-main)' }}
+                      >
+                        {classicLeader?.manager || 'Đang tải'}
+                      </p>
+                      <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+                        {classicLeader?.team || 'HTCV League'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <p
+                      className="text-xl font-stats font-extrabold tabular-nums leading-none"
+                      style={{ color: 'var(--accent-primary)' }}
+                    >
+                      {classicLeader?.total ?? 0}
+                    </p>
+                    <p className="text-[10px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
+                      pts
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="text-base sm:text-xl font-black font-mono" style={{ color: 'var(--accent-tertiary)' }}>
-                100.000đ <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>Vô Địch</span>
-              </p>
-            </div>
-            <p className="text-[10px] font-mono mt-2 pt-2 border-t" style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-faint)' }}>
-              Top 8 Knockout Đấu Loại
-            </p>
-          </div>
 
+              {/* H2H #1 Floating Card */}
+              <div
+                onClick={() => h2hLeader && onSelectPlayer?.(h2hLeader.id)}
+                className="bezel-shell bezel-interactive cursor-pointer"
+                style={{ boxShadow: '0 0 0 1px var(--border-outer), var(--shadow-float)' }}
+              >
+                <div className="bezel-core p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PlayerAvatar
+                      name={h2hLeader?.manager || 'HLV #1'}
+                      avatarUrl={h2hLeader?.avatarUrl}
+                      clubLogoUrl={h2hLeader?.clubLogoUrl}
+                      favoriteClub={h2hLeader?.favoriteClub}
+                      rank={1}
+                      size="md"
+                      showClubBadge
+                    />
+                    <div className="min-w-0">
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold uppercase tracking-wider"
+                        style={{ color: 'var(--accent-secondary)' }}
+                      >
+                        <Swords className="w-3 h-3" strokeWidth={1.7} />
+                        <span>Đỉnh bảng H2H</span>
+                      </span>
+                      <p
+                        className="text-sm font-display font-bold truncate mt-0.5"
+                        style={{ color: 'var(--text-main)' }}
+                      >
+                        {h2hLeader?.manager || 'Đang tải'}
+                      </p>
+                      <p className="text-[11px] font-mono truncate" style={{ color: 'var(--text-muted)' }}>
+                        {h2hLeader ? `${h2hLeader.won}T · ${h2hLeader.drawn}H · ${h2hLeader.lost}B` : 'Đối đầu 1v1'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <p
+                      className="text-xl font-stats font-extrabold tabular-nums leading-none"
+                      style={{ color: 'var(--accent-secondary)' }}
+                    >
+                      {h2hLeader?.points ?? 0}
+                    </p>
+                    <p className="text-[10px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>
+                      Pts
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
       </div>
-
-    </div>
+    </Reveal>
   );
 };

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Swords, Trophy, ChevronLeft, ChevronRight, Crown } from 'lucide-react';
+import { Swords, Trophy, ChevronLeft, ChevronRight, ArrowLeftRight } from 'lucide-react';
 import { H2HStanding, H2HMatch, LiveGwData, H2HScheduleRow } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { INITIAL_PLAYERS } from '../data/initialData';
 import { SquadPopupWrap } from './SquadTooltip';
 import { fetchH2HSchedule } from '../services/fplApi';
+import { Reveal } from './scroll-reveal';
 
 interface H2HArenaProps {
   standings: H2HStanding[];
@@ -24,8 +25,6 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
   const [selectedGW, setSelectedGW] = useState<number>(currentGW);
   const [gwTouched, setGwTouched] = useState(false);
 
-  // Open on the gameweek being played; keep following it until the visitor
-  // navigates somewhere else themselves.
   useEffect(() => {
     if (!gwTouched) setSelectedGW(currentGW);
   }, [currentGW, gwTouched]);
@@ -35,27 +34,19 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
     setSelectedGW(next);
   };
 
-  const teamOf = (id: number) => INITIAL_PLAYERS.find(p => p.id === id)?.team || '';
+  const teamOf = (id: number) => INITIAL_PLAYERS.find((p) => p.id === id)?.team || '';
 
-  /**
-   * The league's real schedule, straight from the FPL api via the backend —
-   * the same fixtures as the official league page. A locally generated
-   * round-robin used to stand in here and showed wrong pairings with the
-   * previous gameweek's points.
-   */
   const [schedule, setSchedule] = useState<H2HScheduleRow[] | null>(null);
   useEffect(() => {
     let cancelled = false;
-    fetchH2HSchedule().then(rows => {
+    fetchH2HSchedule().then((rows) => {
       if (!cancelled) setSchedule(rows);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  /**
-   * Fixtures with provisional scores for the gameweek in progress, merged
-   * live so the cards move while matches are on.
-   */
   const liveMatches = (): H2HMatch[] | null => {
     if (!live || live.gw !== selectedGW || !live.h2h.length) return null;
     return live.h2h.map((fixture, idx) => ({
@@ -75,33 +66,36 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
         fixture.homePoints === fixture.awayPoints
           ? 'Draw'
           : fixture.homePoints > fixture.awayPoints
-            ? 'Home Win'
-            : 'Away Win',
+          ? 'Home Win'
+          : 'Away Win',
       diff: fixture.diff,
       played: true,
     }));
   };
 
-  /** Fixtures from the real schedule: settled gameweeks carry final points. */
   const scheduleMatches = (): H2HMatch[] | null => {
     if (!schedule) return null;
-    const rows = schedule.filter(r => r.gw === selectedGW);
+    const rows = schedule.filter((r) => r.gw === selectedGW);
     if (!rows.length) return [];
     return rows.map((r, idx) => ({
       gw: selectedGW,
       id: idx + 1,
-      homePlayer: INITIAL_PLAYERS.find(p => p.id === r.homeId)?.manager || `#${r.homeId}`,
+      homePlayer: INITIAL_PLAYERS.find((p) => p.id === r.homeId)?.manager || `#${r.homeId}`,
       homeTeam: teamOf(r.homeId),
       homePts: r.homePts,
       homeH2HPts: r.homePts > r.awayPts ? 3 : r.homePts === r.awayPts ? 1 : 0,
       homeId: r.homeId,
-      awayPlayer: INITIAL_PLAYERS.find(p => p.id === r.awayId)?.manager || `#${r.awayId}`,
+      awayPlayer: INITIAL_PLAYERS.find((p) => p.id === r.awayId)?.manager || `#${r.awayId}`,
       awayTeam: teamOf(r.awayId),
       awayPts: r.awayPts,
-      awayH2HPts: r.awayPts > r.homePts ? 3 : r.homePts === r.awayPts ? 1 : 0,
+      awayH2HPts: r.awayPts > r.homePts ? 3 : r.awayPts === r.homePts ? 1 : 0,
       awayId: r.awayId,
       result: r.played
-        ? r.homePts === r.awayPts ? 'Draw' : r.homePts > r.awayPts ? 'Home Win' : 'Away Win'
+        ? r.homePts === r.awayPts
+          ? 'Draw'
+          : r.homePts > r.awayPts
+          ? 'Home Win'
+          : 'Away Win'
         : 'Upcoming',
       diff: Math.abs(r.homePts - r.awayPts),
       played: r.played,
@@ -114,303 +108,413 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
   const scheduleLoading = !liveNow && schedule === null;
 
   return (
-    <div className="space-y-8">
-      
-      {/* Header Banner */}
-      <div className="glass-panel rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Swords className="w-5 h-5" style={{ color: 'var(--accent-secondary)' }} />
-            <h3 className="text-lg sm:text-xl font-display font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-              Head-to-Head League Arena (Đá Vòng Tròn 1vs1)
-            </h3>
-          </div>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            Tính điểm như Ngoại Hạng Anh: Thắng 3 điểm, Hòa 1 điểm, Thua 0 điểm. 7 cặp đấu nảy lửa mỗi vòng.
-          </p>
-        </div>
-
-        {/* Prize Tag */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border"
-          style={{
-            backgroundColor: 'var(--bg-card-hover)',
-            borderColor: 'var(--border-highlight)',
-            color: 'var(--accent-secondary)'
-          }}
-        >
-          <Trophy className="w-4 h-4" />
-          <span>Vô địch H2H: 800.000đ</span>
-        </div>
-      </div>
-
-      {/* Matchday Match Center */}
-      <div className="glass-panel rounded-2xl p-4 sm:p-6">
-        
-        {/* GW Selector Carousel */}
-        <div className="flex items-center justify-between pb-4 border-b mb-6" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-secondary)' }} />
-            <h4 className="text-sm sm:text-base font-display font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-              Lịch Thi Đấu & Kết Quả Gameweek {selectedGW}
-            </h4>
-            {showingLive && (
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-black animate-pulse"
-                style={{ backgroundColor: '#ff2d55', color: '#ffffff' }}
-              >
-                ● LIVE
+    <div className="space-y-8 md:space-y-10">
+      {/* Header */}
+      <Reveal>
+        <div className="bezel-shell">
+          <div className="bezel-core p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <span className="eyebrow-pill mb-2">
+                <Swords className="w-3 h-3" strokeWidth={1.6} style={{ color: 'var(--accent-secondary)' }} />
+                <span>Head-to-Head · #132702</span>
               </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => chooseGW(Math.max(1, selectedGW - 1))}
-              disabled={selectedGW === 1}
-              className="p-1.5 rounded-lg border disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              style={{
-                backgroundColor: 'var(--bg-card)',
-                borderColor: 'var(--border-subtle)',
-                color: 'var(--text-main)'
-              }}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-mono font-bold px-2" style={{ color: 'var(--accent-secondary)' }}>
-              GW {selectedGW} / 38
-            </span>
-            <button
-              onClick={() => chooseGW(Math.min(38, selectedGW + 1))}
-              disabled={selectedGW === 38}
-              className="p-1.5 rounded-lg border disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              style={{
-                backgroundColor: 'var(--bg-card)',
-                borderColor: 'var(--border-subtle)',
-                color: 'var(--text-main)'
-              }}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* 7 Matchup Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {scheduleLoading ? (
-            <p className="text-xs font-mono col-span-full py-6 text-center" style={{ color: 'var(--text-muted)' }}>
-              ⏳ Đang tải lịch thi đấu từ FPL...
-            </p>
-          ) : matches.length === 0 ? (
-            <p className="text-xs font-mono col-span-full py-6 text-center" style={{ color: 'var(--text-muted)' }}>
-              Chưa có lịch thi đấu Gameweek {selectedGW}
-            </p>
-          ) : matches.map((m, idx) => {
-            const homeP = INITIAL_PLAYERS.find(p => p.id === m.homeId);
-            const awayP = INITIAL_PLAYERS.find(p => p.id === m.awayId);
-
-            return (
-              <div
-                key={idx}
-                className="rounded-xl p-3.5 border transition-all group"
-                style={{
-                  backgroundColor: 'var(--bg-card-solid)',
-                  borderColor: 'var(--border-subtle)'
-                }}
+              <h3
+                className="text-xl sm:text-2xl font-display font-bold tracking-tight"
+                style={{ color: 'var(--text-main)' }}
               >
-                <div className="text-[10px] font-mono mb-2 flex items-center justify-between" style={{ color: 'var(--text-faint)' }}>
-                  <span>TRẬN #{idx + 1}</span>
-                  <span className="font-semibold" style={{ color: 'var(--accent-primary)' }}>Gameweek {m.gw}</span>
-                </div>
+                Đối đầu trực tiếp 1v1
+              </h3>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                7 cặp đấu mỗi vòng. Đội nhiều điểm vòng hơn nhận 3 điểm H2H, bằng điểm chia nhau 1 điểm.
+              </p>
+            </div>
 
-                {/* Home Team */}
-                <div className="flex items-center justify-between py-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <PlayerAvatar
-                      name={m.homePlayer}
-                      clubLogoUrl={homeP?.clubLogoUrl}
-                      favoriteClub={homeP?.favoriteClub}
-                      size="xs"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
-                        {m.homePlayer}
-                      </p>
-                      <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{m.homeTeam}</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-mono font-bold px-2 py-0.5 rounded cursor-help"
-                    style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
-                  >
-                    <SquadPopupWrap live={live} gw={selectedGW} managerId={m.homeId}>
-                      <span>{m.played ? m.homePts : '-'}</span>
-                    </SquadPopupWrap>
-                  </span>
-                </div>
-
-                {/* VS Divider */}
-                <div className="text-center my-0.5">
-                  <span className="text-[9px] font-mono font-bold uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>VS</span>
-                </div>
-
-                {/* Away Team */}
-                <div className="flex items-center justify-between py-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <PlayerAvatar
-                      name={m.awayPlayer}
-                      clubLogoUrl={awayP?.clubLogoUrl}
-                      favoriteClub={awayP?.favoriteClub}
-                      size="xs"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
-                        {m.awayPlayer}
-                      </p>
-                      <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{m.awayTeam}</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-mono font-bold px-2 py-0.5 rounded cursor-help"
-                    style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
-                  >
-                    <SquadPopupWrap live={live} gw={selectedGW} managerId={m.awayId}>
-                      <span>{m.played ? m.awayPts : '-'}</span>
-                    </SquadPopupWrap>
-                  </span>
-                </div>
-
-              </div>
-            );
-          })}
+            <div className="surface-well px-4 py-2.5 flex items-center gap-2 text-xs font-mono font-semibold flex-shrink-0">
+              <Trophy className="w-3.5 h-3.5" strokeWidth={1.5} style={{ color: 'var(--accent-gold)' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>Vô địch H2H:</span>
+              <span style={{ color: 'var(--accent-gold)' }}>800.000đ</span>
+            </div>
+          </div>
         </div>
+      </Reveal>
 
-      </div>
-
-      {/* Main H2H Standings Table */}
-      <div className="glass-panel rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-4 border-b" style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}>
-          <h4 className="text-sm font-display font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-            Bảng Xếp Hạng H2H Chi Tiết
-          </h4>
-        </div>
-        <div className="md:hidden flex items-center justify-between px-3 py-1.5 border-b text-[10px] font-mono"
-          style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
-        >
-          <span>⚔️ BXH H2H 14 HLV</span>
-          <span>👉 Vuốt ngang xem chỉ số</span>
-        </div>
-        <div className="overflow-x-auto max-h-[600px] scrollbar-thin touch-scroll">
-          <table className="w-full border-collapse text-left text-xs">
-            <thead className="font-mono text-[11px] sticky top-0 z-20 uppercase border-b"
-              style={{
-                backgroundColor: 'var(--table-head-bg)',
-                borderColor: 'var(--border-subtle)',
-                color: 'var(--text-muted)'
-              }}
+      {/* Matchday Fixtures */}
+      <Reveal delayMs={40}>
+        <div className="bezel-shell">
+          <div className="bezel-core p-5 sm:p-6">
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
             >
-              <tr>
-                <th className="py-2.5 sm:py-3 px-1.5 sm:px-3 w-10 sm:w-12 text-center sticky left-0 z-30 border-r"
-                  style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
+              <div className="flex items-center gap-2.5">
+                <h4
+                  className="text-sm sm:text-base font-display font-bold"
+                  style={{ color: 'var(--text-main)' }}
                 >
-                  #
-                </th>
-                <th className="py-2.5 sm:py-3 px-2.5 sm:px-4 min-w-[135px] sm:min-w-[190px] sticky left-10 sm:left-12 z-30 border-r"
-                  style={{ backgroundColor: 'var(--table-head-bg)', borderColor: 'var(--border-subtle)' }}
-                >
-                  HLV & Đội Bóng
-                </th>
-                <th className="py-2.5 sm:py-3 px-2 text-center w-9 sm:w-10">P</th>
-                <th className="py-2.5 sm:py-3 px-2 text-center w-9 sm:w-10" style={{ color: 'var(--accent-primary)' }}>W</th>
-                <th className="py-2.5 sm:py-3 px-2 text-center w-9 sm:w-10">D</th>
-                <th className="py-2.5 sm:py-3 px-2 text-center w-9 sm:w-10" style={{ color: 'var(--accent-tertiary)' }}>L</th>
-                <th className="py-2.5 sm:py-3 px-2 text-center w-10 sm:w-12">GF</th>
-                <th className="py-2.5 sm:py-3 px-2 text-center w-10 sm:w-12">GA</th>
-                <th className="py-2.5 sm:py-3 px-2 text-center w-10 sm:w-12">GD</th>
-                <th className="py-2.5 sm:py-3 px-3 text-center min-w-[60px] font-black" style={{ color: 'var(--accent-secondary)' }}>PTS</th>
-                <th className="py-2.5 sm:py-3 px-3 text-center min-w-[75px]">Classic</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y font-sans" style={{ borderColor: 'var(--border-subtle)' }}>
-              {standings.map((p) => {
-                const isRank1 = p.rank === 1;
-                const isRank2 = p.rank === 2;
-                const isRank3 = p.rank === 3;
-
-                return (
-                  <tr
-                    key={p.id}
-                    onClick={() => onSelectPlayer(p.id)}
-                    className="interactive transition-colors cursor-pointer"
+                  Kết quả cặp đấu vòng {selectedGW}
+                </h4>
+                {showingLive && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold"
                     style={{
-                      backgroundColor: isRank1
-                        ? 'rgba(255, 215, 0, 0.06)'
-                        : isRank2
-                        ? 'rgba(226, 232, 240, 0.04)'
-                        : isRank3
-                        ? 'rgba(249, 115, 22, 0.04)'
-                        : undefined
+                      backgroundColor: 'var(--accent-tertiary-soft)',
+                      color: 'var(--accent-tertiary)',
                     }}
                   >
-                    <td className="py-2.5 sm:py-3 px-1.5 sm:px-3 text-center font-mono font-black sticky left-0 z-10 border-r"
-                      style={{
-                        backgroundColor: 'var(--bg-card-solid)',
-                        borderColor: 'var(--border-subtle)',
-                        color: isRank1 ? 'var(--accent-gold)' : isRank2 ? 'var(--text-main)' : isRank3 ? '#f97316' : 'var(--text-muted)'
-                      }}
-                    >
-                      {p.rank}
-                    </td>
+                    <span
+                      className="w-1.5 h-1.5 rounded-full animate-pulse-soft"
+                      style={{ backgroundColor: 'var(--accent-tertiary)' }}
+                    />
+                    LIVE
+                  </span>
+                )}
+              </div>
 
-                    <td className="py-2.5 sm:py-3 px-2.5 sm:px-4 sticky left-10 sm:left-12 z-10 border-r min-w-[135px] sm:min-w-[190px]"
-                      style={{
-                        backgroundColor: 'var(--bg-card-solid)',
-                        borderColor: 'var(--border-subtle)',
-                      }}
-                    >
-                      <div className="flex items-center gap-2 sm:gap-2.5">
-                        <PlayerAvatar
-                          name={p.manager}
-                          avatarUrl={p.avatarUrl}
-                          clubLogoUrl={p.clubLogoUrl}
-                          favoriteClub={p.favoriteClub}
-                          rank={p.rank}
-                          size="xs"
-                        />
-                        <div className="min-w-0">
-                          <p className="font-bold truncate text-[11px] sm:text-sm font-display flex items-center gap-1 sm:gap-1.5" style={{ color: 'var(--text-main)' }}>
-                            {p.manager}
-                            {isRank1 && <span title="Hạng 1 H2H" className="inline-flex flex-shrink-0"><Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 fill-[#ffd700] text-[#ffd700]" /></span>}
-                            {isRank2 && <span title="Hạng 2 H2H" className="inline-flex flex-shrink-0"><Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 fill-[#e2e8f0] text-[#cbd5e1]" /></span>}
-                            {isRank3 && <span title="Hạng 3 H2H" className="inline-flex flex-shrink-0"><Crown className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0 fill-[#ea580c] text-[#f97316]" /></span>}
-                          </p>
-                          <p className="text-[9px] sm:text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
-                            {p.team}
-                          </p>
-                        </div>
+              <div
+                className="inline-flex items-center gap-1 p-1 rounded-full"
+                style={{
+                  backgroundColor: 'var(--bg-card-solid)',
+                  boxShadow: '0 0 0 1px var(--border-outer)',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => chooseGW(Math.max(1, selectedGW - 1))}
+                  disabled={selectedGW === 1}
+                  aria-label="Vòng trước"
+                  className="pressable w-7 h-7 rounded-full flex items-center justify-center disabled:opacity-30"
+                  style={{ color: 'var(--text-main)' }}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" strokeWidth={1.6} />
+                </button>
+                <span
+                  className="text-xs font-mono font-semibold tabular-nums px-2.5"
+                  style={{ color: 'var(--text-main)' }}
+                >
+                  GW {selectedGW} / 38
+                </span>
+                <button
+                  type="button"
+                  onClick={() => chooseGW(Math.min(38, selectedGW + 1))}
+                  disabled={selectedGW === 38}
+                  aria-label="Vòng kế tiếp"
+                  className="pressable w-7 h-7 rounded-full flex items-center justify-center disabled:opacity-30"
+                  style={{ color: 'var(--text-main)' }}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.6} />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {scheduleLoading ? (
+                <p
+                  className="text-xs font-mono col-span-full py-8 text-center"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  Đang tải lịch bốc thăm chính thức từ FPL...
+                </p>
+              ) : matches.length === 0 ? (
+                <p
+                  className="text-xs font-mono col-span-full py-8 text-center"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  Chưa có dữ liệu lịch đấu vòng {selectedGW}.
+                </p>
+              ) : (
+                matches.map((m, idx) => {
+                  const homeP = INITIAL_PLAYERS.find((p) => p.id === m.homeId);
+                  const awayP = INITIAL_PLAYERS.find((p) => p.id === m.awayId);
+                  const homeWon = m.played && m.homePts > m.awayPts;
+                  const awayWon = m.played && m.awayPts > m.homePts;
+
+                  return (
+                    <div key={idx} className="surface-well surface-well-hover p-4">
+                      <div
+                        className="text-[10px] font-mono mb-3 flex items-center justify-between"
+                        style={{ color: 'var(--text-faint)' }}
+                      >
+                        <span>CẶP {String(idx + 1).padStart(2, '0')}</span>
+                        <span>
+                          {m.played
+                            ? m.diff === 0
+                              ? 'Hòa điểm'
+                              : `Chênh ${m.diff} pts`
+                            : 'Chưa đấu'}
+                        </span>
                       </div>
-                    </td>
 
-                    <td className="py-2.5 sm:py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>{p.played}</td>
-                    <td className="py-2.5 sm:py-3 px-2 text-center font-mono font-bold" style={{ color: 'var(--accent-primary)' }}>{p.won}</td>
-                    <td className="py-2.5 sm:py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>{p.drawn}</td>
-                    <td className="py-2.5 sm:py-3 px-2 text-center font-mono" style={{ color: 'var(--accent-tertiary)' }}>{p.lost}</td>
-                    <td className="py-2.5 sm:py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>{p.pointsFor}</td>
-                    <td className="py-2.5 sm:py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>{p.pointsAgainst}</td>
-                    <td className="py-2.5 sm:py-3 px-2 text-center font-mono font-bold" style={{ color: 'var(--text-main)' }}>
-                      {p.goalDifference > 0 ? `+${p.goalDifference}` : p.goalDifference}
-                    </td>
-                    <td className="py-2.5 sm:py-3 px-3 text-center font-mono font-black text-xs sm:text-sm" style={{ color: 'var(--accent-secondary)' }}>
-                      {p.points}
-                    </td>
-                    <td className="py-2.5 sm:py-3 px-3 text-center font-mono text-[11px] sm:text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {p.classicTotal}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {/* Home */}
+                      <div className="flex items-center justify-between gap-2 py-1.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <PlayerAvatar
+                            name={m.homePlayer}
+                            avatarUrl={homeP?.avatarUrl}
+                            clubLogoUrl={homeP?.clubLogoUrl}
+                            favoriteClub={homeP?.favoriteClub}
+                            size="xs"
+                          />
+                          <div className="min-w-0">
+                            <p
+                              className="text-xs font-semibold truncate"
+                              style={{
+                                color: homeWon ? 'var(--text-main)' : 'var(--text-secondary)',
+                              }}
+                            >
+                              {m.homePlayer}
+                            </p>
+                            <p className="text-[10px] truncate" style={{ color: 'var(--text-faint)' }}>
+                              {m.homeTeam}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className="text-xs font-mono font-bold tabular-nums px-2.5 py-1 rounded-lg cursor-help"
+                          style={{
+                            backgroundColor: homeWon ? 'var(--accent-primary-soft)' : 'var(--bg-card)',
+                            color: homeWon ? 'var(--accent-primary)' : 'var(--text-main)',
+                            boxShadow: '0 0 0 1px var(--border-subtle)',
+                          }}
+                        >
+                          <SquadPopupWrap live={live} gw={selectedGW} managerId={m.homeId}>
+                            <span>{m.played ? m.homePts : '-'}</span>
+                          </SquadPopupWrap>
+                        </span>
+                      </div>
+
+                      <div className="my-1.5 flex items-center gap-2">
+                        <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-subtle)' }} />
+                        <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>
+                          vs
+                        </span>
+                        <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-subtle)' }} />
+                      </div>
+
+                      {/* Away */}
+                      <div className="flex items-center justify-between gap-2 py-1.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <PlayerAvatar
+                            name={m.awayPlayer}
+                            avatarUrl={awayP?.avatarUrl}
+                            clubLogoUrl={awayP?.clubLogoUrl}
+                            favoriteClub={awayP?.favoriteClub}
+                            size="xs"
+                          />
+                          <div className="min-w-0">
+                            <p
+                              className="text-xs font-semibold truncate"
+                              style={{
+                                color: awayWon ? 'var(--text-main)' : 'var(--text-secondary)',
+                              }}
+                            >
+                              {m.awayPlayer}
+                            </p>
+                            <p className="text-[10px] truncate" style={{ color: 'var(--text-faint)' }}>
+                              {m.awayTeam}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className="text-xs font-mono font-bold tabular-nums px-2.5 py-1 rounded-lg cursor-help"
+                          style={{
+                            backgroundColor: awayWon ? 'var(--accent-primary-soft)' : 'var(--bg-card)',
+                            color: awayWon ? 'var(--accent-primary)' : 'var(--text-main)',
+                            boxShadow: '0 0 0 1px var(--border-subtle)',
+                          }}
+                        >
+                          <SquadPopupWrap live={live} gw={selectedGW} managerId={m.awayId}>
+                            <span>{m.played ? m.awayPts : '-'}</span>
+                          </SquadPopupWrap>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      </Reveal>
 
+      {/* H2H Standings Table */}
+      <Reveal delayMs={70}>
+        <div className="bezel-shell">
+          <div className="bezel-core overflow-hidden">
+            <div
+              className="px-5 py-4 flex items-center justify-between"
+              style={{
+                backgroundColor: 'var(--table-head-bg)',
+                borderBottom: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div>
+                <h4 className="text-sm font-display font-bold" style={{ color: 'var(--text-main)' }}>
+                  Bảng xếp hạng H2H toàn mùa
+                </h4>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  Xếp theo luật chính thức của FPL: Điểm H2H trước, tổng điểm Classic sau.
+                </p>
+              </div>
+              <span className="md:hidden inline-flex items-center gap-1 text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                <ArrowLeftRight className="w-3 h-3" strokeWidth={1.5} />
+                Vuốt ngang
+              </span>
+            </div>
+
+            <div className="overflow-x-auto max-h-[620px] touch-scroll">
+              <table className="w-full border-collapse text-left text-xs tabular-nums">
+                <thead
+                  className="font-mono text-[10px] sticky top-0 z-20 uppercase tracking-wider"
+                  style={{
+                    backgroundColor: 'var(--table-head-bg)',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <tr>
+                    <th
+                      className="py-3 px-2 sm:px-3 w-10 sm:w-12 text-center sticky left-0 z-30"
+                      style={{
+                        backgroundColor: 'var(--table-head-bg)',
+                        borderRight: '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      #
+                    </th>
+                    <th
+                      className="py-3 px-3 sm:px-4 min-w-[145px] sm:min-w-[200px] sticky left-10 sm:left-12 z-30"
+                      style={{
+                        backgroundColor: 'var(--table-head-bg)',
+                        borderRight: '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      HLV & Đội bóng
+                    </th>
+                    <th className="py-3 px-2 text-center w-10">Trận</th>
+                    <th className="py-3 px-2 text-center w-10" style={{ color: 'var(--accent-primary)' }}>
+                      T
+                    </th>
+                    <th className="py-3 px-2 text-center w-10">H</th>
+                    <th className="py-3 px-2 text-center w-10" style={{ color: 'var(--accent-tertiary)' }}>
+                      B
+                    </th>
+                    <th className="py-3 px-2 text-center w-12">GF</th>
+                    <th className="py-3 px-2 text-center w-12">GA</th>
+                    <th className="py-3 px-2 text-center w-12">GD</th>
+                    <th
+                      className="py-3 px-3 text-center min-w-[66px] font-semibold"
+                      style={{
+                        backgroundColor: 'var(--accent-secondary-soft)',
+                        color: 'var(--accent-secondary)',
+                      }}
+                    >
+                      H2H Pts
+                    </th>
+                    <th className="py-3 px-3 text-center min-w-[78px]">Classic</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y font-sans" style={{ borderColor: 'var(--border-subtle)' }}>
+                  {standings.map((p) => {
+                    const isRank1 = p.rank === 1;
+                    const isRank2 = p.rank === 2;
+                    const isRank3 = p.rank === 3;
+
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => onSelectPlayer(p.id)}
+                        className="transition-colors duration-150 cursor-pointer hover:bg-[var(--table-row-hover)]"
+                        style={isRank1 ? { backgroundColor: 'var(--accent-gold-soft)' } : undefined}
+                      >
+                        <td
+                          className="py-3 px-2 sm:px-3 text-center font-mono font-semibold sticky left-0 z-10"
+                          style={{
+                            backgroundColor: 'var(--bg-card)',
+                            borderRight: '1px solid var(--border-subtle)',
+                            color: isRank1
+                              ? 'var(--accent-gold)'
+                              : isRank2
+                              ? 'var(--text-main)'
+                              : isRank3
+                              ? 'var(--accent-bronze)'
+                              : 'var(--text-muted)',
+                          }}
+                        >
+                          {String(p.rank).padStart(2, '0')}
+                        </td>
+
+                        <td
+                          className="py-2.5 sm:py-3 px-3 sm:px-4 sticky left-10 sm:left-12 z-10 min-w-[145px] sm:min-w-[200px]"
+                          style={{
+                            backgroundColor: 'var(--bg-card)',
+                            borderRight: '1px solid var(--border-subtle)',
+                          }}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <PlayerAvatar
+                              name={p.manager}
+                              avatarUrl={p.avatarUrl}
+                              clubLogoUrl={p.clubLogoUrl}
+                              favoriteClub={p.favoriteClub}
+                              size="xs"
+                            />
+                            <div className="min-w-0">
+                              <p
+                                className="font-semibold truncate text-xs sm:text-[13px] font-display"
+                                style={{ color: isRank1 ? 'var(--accent-gold)' : 'var(--text-main)' }}
+                              >
+                                {p.manager}
+                              </p>
+                              <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                                {p.team}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>
+                          {p.played}
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                          {p.won}
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>
+                          {p.drawn}
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono" style={{ color: 'var(--accent-tertiary)' }}>
+                          {p.lost}
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>
+                          {p.pointsFor}
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono" style={{ color: 'var(--text-muted)' }}>
+                          {p.pointsAgainst}
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                          {p.goalDifference > 0 ? `+${p.goalDifference}` : p.goalDifference}
+                        </td>
+                        <td
+                          className="py-3 px-3 text-center font-mono font-bold text-xs sm:text-sm"
+                          style={{
+                            color: 'var(--accent-secondary)',
+                            backgroundColor: 'var(--accent-secondary-soft)',
+                          }}
+                        >
+                          {p.points}
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {p.classicTotal}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </Reveal>
     </div>
   );
 };

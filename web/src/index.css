@@ -3,219 +3,366 @@
 @tailwind utilities;
 
 @layer base {
-  /* ========================================================
-     THEME 1: FPL CLASSIC (Official Premier League Broadcast)
-     ======================================================== */
+  /* =========================================================================
+     THEME 1 (DEFAULT): PREMIER DAYLIGHT STUDIO
+     Soft Structuralism x Official Premier League Broadcast Editorial.
+     Luminous pearl-alabaster canvas, pure porcelain cores, royal aubergine ink,
+     and Stripe-grade brand-tinted ambient shadows. Zero deep dark surfaces.
+     ========================================================================= */
   :root,
   [data-theme='fpl'] {
-    --bg-app: #080310;
-    --bg-header: rgba(14, 5, 24, 0.85);
-    --bg-card: rgba(28, 12, 44, 0.72);
-    --bg-card-hover: rgba(44, 18, 68, 0.88);
-    --bg-card-solid: #1b082c;
-    --bg-elevated: rgba(55, 0, 60, 0.4);
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --border-highlight: rgba(0, 255, 135, 0.35);
-    --text-main: #ffffff;
-    --text-muted: #94a3b8;
-    --text-faint: #64748b;
-    --accent-primary: #00ff87;     /* EPL Green */
-    --accent-secondary: #04f5ff;   /* EPL Cyan */
-    --accent-tertiary: #e90052;    /* EPL Pink */
-    --accent-gold: #ffd700;        /* Trophy Gold */
-    --accent-brand: #37003c;       /* EPL Purple */
-    --stadium-tint: rgba(55, 0, 60, 0.5);
-    --glow-primary: rgba(0, 255, 135, 0.35);
-    --table-head-bg: #180826;
-    --table-row-hover: rgba(255, 255, 255, 0.04);
-  }
-
-  /* ========================================================
-     THEME 2: MIDNIGHT CARBON (Dark Luxe / Linear Minimalist)
-     ======================================================== */
-  [data-theme='dark'] {
-    --bg-app: #090a0f;
-    --bg-header: rgba(13, 15, 22, 0.88);
-    --bg-card: rgba(18, 21, 30, 0.8);
-    --bg-card-hover: rgba(26, 31, 44, 0.9);
-    --bg-card-solid: #141720;
-    --bg-elevated: rgba(30, 36, 52, 0.5);
-    --border-subtle: rgba(255, 255, 255, 0.09);
-    --border-highlight: rgba(16, 185, 129, 0.4);
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-faint: #64748b;
-    --accent-primary: #10b981;     /* Clean Emerald */
-    --accent-secondary: #06b6d4;   /* Cool Cyan */
-    --accent-tertiary: #f43f5e;    /* Rose Red */
-    --accent-gold: #f59e0b;        /* Amber Gold */
-    --accent-brand: #1e293b;       /* Slate Dark */
-    --stadium-tint: rgba(15, 23, 42, 0.7);
-    --glow-primary: rgba(16, 185, 129, 0.3);
-    --table-head-bg: #11141c;
-    --table-row-hover: rgba(255, 255, 255, 0.04);
-  }
-
-  /* ========================================================
-     THEME 3: STUDIO DAYLIGHT (Light Editorial / High Contrast)
-     ======================================================== */
-  [data-theme='light'] {
-    --bg-app: #f1f5f9;
-    --bg-header: rgba(255, 255, 255, 0.95);
+    --bg-app: #f3f2f8;
+    --bg-header: rgba(255, 255, 255, 0.86);
+    --bg-overlay: rgba(23, 11, 38, 0.44);
+    --bg-tray: rgba(56, 0, 60, 0.038);
+    --border-outer: rgba(56, 0, 60, 0.088);
     --bg-card: #ffffff;
-    --bg-card-hover: #f8fafc;
-    --bg-card-solid: #ffffff;
-    --bg-elevated: #e2e8f0;
-    --border-subtle: #cbd5e1;
-    --border-highlight: rgba(67, 56, 202, 0.5);
-    --text-main: #0f172a;
-    --text-muted: #334155;
-    --text-faint: #64748b;
-    --accent-primary: #047857;     /* Deep Emerald (High Contrast) */
-    --accent-secondary: #0369a1;   /* Deep Sky Blue (High Contrast) */
-    --accent-tertiary: #be123c;    /* Deep Crimson (High Contrast) */
-    --accent-gold: #b45309;        /* Warm Amber Gold (High Contrast) */
-    --accent-brand: #4338ca;       /* Premier Indigo */
-    --stadium-tint: rgba(241, 245, 249, 0.88);
-    --glow-primary: rgba(4, 120, 87, 0.2);
-    --table-head-bg: #eef2f6;
-    --table-row-hover: #f1f5f9;
+    --bg-card-hover: #fbfafd;
+    --bg-card-solid: #f6f5fb;
+    --bg-elevated: #eceaf6;
+    --border-subtle: rgba(32, 14, 54, 0.068);
+    --border-highlight: rgba(4, 120, 87, 0.28);
+    --inner-highlight: rgba(255, 255, 255, 0.96);
+
+    --text-main: #170b26;
+    --text-secondary: #352749;
+    --text-muted: #615676;
+    --text-faint: #8c82a0;
+
+    --accent-primary: #047857;
+    --accent-primary-ink: #ffffff;
+    --accent-primary-soft: rgba(4, 120, 87, 0.09);
+    --accent-secondary: #4f46e5;
+    --accent-secondary-soft: rgba(79, 70, 229, 0.09);
+    --accent-tertiary: #be123c;
+    --accent-tertiary-soft: rgba(190, 18, 60, 0.09);
+    --accent-gold: #b45309;
+    --accent-gold-soft: rgba(217, 119, 6, 0.11);
+    --accent-silver: #475569;
+    --accent-bronze: #9a3412;
+    --accent-brand: #38003c;
+    --accent-brand-ink: #ffffff;
+    --accent-brand-spark: #34d399;
+
+    --table-head-bg: #f1eff8;
+    --table-row-hover: rgba(56, 0, 60, 0.025);
+    --shadow-ambient: 0 24px 48px -20px rgba(42, 14, 68, 0.085), 0 8px 20px -10px rgba(23, 11, 38, 0.045);
+    --shadow-float: 0 30px 64px -18px rgba(42, 14, 68, 0.16), 0 12px 28px -12px rgba(23, 11, 38, 0.08);
   }
 
-  /* ========================================================
-     THEME 4: VOLT PITCH (Cyber Athletic / Modern UCL & EA FC)
-     ======================================================== */
-  [data-theme='volt'] {
-    --bg-app: #060b0e;
-    --bg-header: rgba(10, 19, 26, 0.9);
-    --bg-card: rgba(13, 24, 32, 0.8);
-    --bg-card-hover: rgba(19, 36, 48, 0.92);
-    --bg-card-solid: #0d1a24;
-    --bg-elevated: rgba(18, 42, 56, 0.5);
-    --border-subtle: rgba(204, 255, 0, 0.12);
-    --border-highlight: rgba(204, 255, 0, 0.45);
-    --text-main: #ffffff;
-    --text-muted: #93c5fd;
-    --text-faint: #64748b;
-    --accent-primary: #ccff00;     /* Volt Lime */
-    --accent-secondary: #00f2fe;   /* Electric Ice Cyan */
-    --accent-tertiary: #ff2a6d;    /* Hot Coral */
-    --accent-gold: #ffd200;        /* Cyber Gold */
-    --accent-brand: #0c202d;       /* Pitch Navy */
-    --stadium-tint: rgba(6, 40, 56, 0.55);
-    --glow-primary: rgba(204, 255, 0, 0.35);
-    --table-head-bg: #09141c;
-    --table-row-hover: rgba(204, 255, 0, 0.05);
+  /* =========================================================================
+     THEME 2: ROYAL VELVET DUSK (Mid-Tone Premier League Purple Studio)
+     Rich satin aubergine-indigo broadcast palette — never pitch-black OLED.
+     ========================================================================= */
+  [data-theme='dusk'] {
+    --bg-app: #221a36;
+    --bg-header: rgba(42, 32, 68, 0.84);
+    --bg-overlay: rgba(20, 14, 34, 0.68);
+    --bg-tray: rgba(255, 255, 255, 0.055);
+    --border-outer: rgba(255, 255, 255, 0.11);
+    --bg-card: #2c2246;
+    --bg-card-hover: #332852;
+    --bg-card-solid: #261d3d;
+    --bg-elevated: #3a2d5c;
+    --border-subtle: rgba(255, 255, 255, 0.085);
+    --border-highlight: rgba(52, 211, 153, 0.36);
+    --inner-highlight: rgba(255, 255, 255, 0.11);
+
+    --text-main: #f8f7fc;
+    --text-secondary: #dedaf0;
+    --text-muted: #b0a8cc;
+    --text-faint: #837aa3;
+
+    --accent-primary: #34d399;
+    --accent-primary-ink: #06281e;
+    --accent-primary-soft: rgba(52, 211, 153, 0.14);
+    --accent-secondary: #a5b4fc;
+    --accent-secondary-soft: rgba(165, 180, 252, 0.14);
+    --accent-tertiary: #fb7185;
+    --accent-tertiary-soft: rgba(251, 113, 133, 0.15);
+    --accent-gold: #fbbf24;
+    --accent-gold-soft: rgba(251, 191, 36, 0.14);
+    --accent-silver: #cbd5e1;
+    --accent-bronze: #fdba74;
+    --accent-brand: #34d399;
+    --accent-brand-ink: #07291e;
+    --accent-brand-spark: #07291e;
+
+    --table-head-bg: #251c3b;
+    --table-row-hover: rgba(255, 255, 255, 0.04);
+    --shadow-ambient: 0 24px 52px -22px rgba(12, 8, 24, 0.45);
+    --shadow-float: 0 30px 68px -18px rgba(12, 8, 24, 0.58);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
 
   body {
     background-color: var(--bg-app);
     color: var(--text-main);
     font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.011em;
     overflow-x: hidden;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 280ms cubic-bezier(0.23, 1, 0.32, 1),
+      color 280ms cubic-bezier(0.23, 1, 0.32, 1);
   }
 
-  /* Custom modern scrollbars */
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: var(--accent-primary-soft);
+    color: var(--accent-primary);
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--bg-app);
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--border-outer);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-primary);
+    background: var(--text-faint);
   }
 }
 
-/* Glassmorphism card surfaces */
-.glass-panel {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+/* =========================================================================
+   DOUBLE-BEZEL (DOPPELRAND) MACHINED ARCHITECTURE
+   Outer hardware tray + inner elevated porcelain/satin plate.
+   ========================================================================= */
+.bezel-shell {
+  padding: 6px;
+  border-radius: 1.75rem;
+  background-color: var(--bg-tray);
+  box-shadow: 0 0 0 1px var(--border-outer);
+  transition: box-shadow 240ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 240ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 240ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-[data-theme='light'] .glass-panel {
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+.bezel-shell-lg {
+  padding: 8px;
+  border-radius: 2.125rem;
+  background-color: var(--bg-tray);
+  box-shadow: 0 0 0 1px var(--border-outer);
 }
 
-.glass-panel-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.glass-panel-hover:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-highlight);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 36px 0 var(--glow-primary);
+.bezel-core {
+  border-radius: calc(1.75rem - 6px);
+  background-color: var(--bg-card);
+  box-shadow: inset 0 1px 0 0 var(--inner-highlight), var(--shadow-ambient);
 }
 
-/* Pitch tactical grid background */
-.pitch-grid {
-  background-image: 
-    linear-gradient(to right, rgba(0, 255, 135, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 255, 135, 0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
+.bezel-core-lg {
+  border-radius: calc(2.125rem - 8px);
+  background-color: var(--bg-card);
+  box-shadow: inset 0 1px 0 0 var(--inner-highlight), var(--shadow-ambient);
 }
 
-[data-theme='volt'] .pitch-grid {
-  background-image: 
-    linear-gradient(to right, rgba(204, 255, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(204, 255, 0, 0.05) 1px, transparent 1px);
+/* Nested sub-well inside a bezel card */
+.surface-well {
+  border-radius: 1.125rem;
+  background-color: var(--bg-card-solid);
+  box-shadow: 0 0 0 1px var(--border-subtle), inset 0 1px 0 0 var(--inner-highlight);
+  transition: background-color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-[data-theme='dark'] .pitch-grid {
-  background-image: 
-    linear-gradient(to right, rgba(16, 185, 129, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(16, 185, 129, 0.04) 1px, transparent 1px);
+@media (hover: hover) and (pointer: fine) {
+  .bezel-interactive:hover {
+    box-shadow: 0 0 0 1px var(--border-highlight);
+    transform: translateY(-2px);
+  }
+  .surface-well-hover:hover {
+    background-color: var(--bg-card-hover);
+    box-shadow: 0 0 0 1px var(--border-highlight), inset 0 1px 0 0 var(--inner-highlight);
+    transform: translateY(-1.5px);
+  }
 }
 
-[data-theme='light'] .pitch-grid {
-  background-image: 
-    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+/* =========================================================================
+   MICROSCOPIC EYEBROW TAG & BUTTON-IN-BUTTON ISLAND ARCHITECTURE
+   ========================================================================= */
+.eyebrow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.425rem;
+  padding: 0.28rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  background-color: var(--bg-card-solid);
+  color: var(--text-secondary);
+  box-shadow: 0 0 0 1px var(--border-outer), inset 0 1px 0 0 var(--inner-highlight);
 }
 
-/* Trophy podium steps */
+.btn-island {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  border-radius: 9999px;
+  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background-color: var(--accent-brand);
+  color: var(--accent-brand-ink);
+  box-shadow: 0 12px 24px -10px rgba(56, 0, 60, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.btn-island:active,
+.btn-island-ghost:active,
+.pressable:active {
+  transform: scale(0.97);
+}
+
+.btn-island-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 9999px;
+  padding: 0.48rem 0.5rem 0.48rem 1.1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: 0 0 0 1px var(--border-outer), var(--shadow-ambient);
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.btn-island-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.14);
+  color: var(--accent-brand-spark);
+  transition: transform 240ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-theme='dusk'] .btn-island-icon {
+  background-color: rgba(7, 41, 30, 0.16);
+}
+
+.btn-island-ghost .btn-island-icon {
+  background-color: var(--bg-elevated);
+  color: var(--accent-primary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-island:hover .btn-island-icon,
+  .btn-island-ghost:hover .btn-island-icon {
+    transform: translate(2px, -1.5px) scale(1.06);
+  }
+  .btn-island-ghost:hover {
+    background-color: var(--bg-card-hover);
+    box-shadow: 0 0 0 1px var(--border-highlight), var(--shadow-ambient);
+  }
+}
+
+/* =========================================================================
+   NUMERICAL PRECISION & SCULPTED COLLECTOR PODIUM CARDS
+   ========================================================================= */
+.font-mono,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 .podium-1 {
-  background: linear-gradient(180deg, rgba(255, 215, 0, 0.25) 0%, var(--bg-card-solid) 100%);
-  border-top: 3px solid var(--accent-gold);
+  background: linear-gradient(165deg, rgba(251, 191, 36, 0.16) 0%, var(--bg-card) 58%, var(--bg-card-solid) 100%);
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.28), inset 0 2px 0 0 var(--accent-gold), var(--shadow-ambient);
 }
 .podium-2 {
-  background: linear-gradient(180deg, rgba(226, 232, 240, 0.2) 0%, var(--bg-card-solid) 100%);
-  border-top: 3px solid #e2e8f0;
+  background: linear-gradient(165deg, rgba(148, 163, 184, 0.16) 0%, var(--bg-card) 60%, var(--bg-card-solid) 100%);
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.22), inset 0 2px 0 0 var(--accent-silver);
 }
 .podium-3 {
-  background: linear-gradient(180deg, rgba(249, 115, 22, 0.2) 0%, var(--bg-card-solid) 100%);
-  border-top: 3px solid #f97316;
+  background: linear-gradient(165deg, rgba(234, 88, 12, 0.13) 0%, var(--bg-card) 60%, var(--bg-card-solid) 100%);
+  box-shadow: 0 0 0 1px rgba(194, 65, 12, 0.22), inset 0 2px 0 0 var(--accent-bronze);
 }
 
-/* Custom mobile responsive utilities */
-html {
-  -webkit-tap-highlight-color: transparent;
-  scroll-behavior: smooth;
+/* Subtle architectural pitch coordinate grid */
+.pitch-grid {
+  background-image:
+    linear-gradient(to right, rgba(56, 0, 60, 0.032) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 0, 60, 0.032) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
 
-/* Mobile smooth touch scrolling */
+[data-theme='dusk'] .pitch-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+}
+
+/* Fixed film-grain overlay (GPU-safe: fixed + pointer-events-none) */
+.film-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Scroll interpolation entry animation */
+.reveal-item {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 720ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 720ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.reveal-item[data-visible='true'] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-item {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 .touch-scroll {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
 
-/* Safe area padding for mobile notches and home bars */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 
-/* Hide scrollbars while keeping swipeable scrollability */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -223,12 +370,3 @@ html {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-/* Hide default cursor on desktop when custom cursor is active */
-@media (hover: hover) and (pointer: fine) {
-  .custom-cursor-active,
-  .custom-cursor-active * {
-    cursor: none !important;
-  }
-}
-

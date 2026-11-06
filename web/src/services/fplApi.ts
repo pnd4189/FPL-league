@@ -300,6 +300,7 @@ export async function triggerLiveSync(): Promise<{ success: boolean; message: st
 export interface SeasonInfo {
   displayGw: number;
   currentGw: number;
+  nextGw: number | null;
   isLive: boolean;
   isPreSeason: boolean;
   finishedGws: number;
@@ -318,6 +319,7 @@ export async function fetchSeasonInfo(): Promise<SeasonInfo | null> {
     return {
       displayGw: json.data.displayGw,
       currentGw: json.data.currentGw,
+      nextGw: typeof json.data.nextGw === 'number' ? json.data.nextGw : null,
       isLive: !!json.data.isLive,
       isPreSeason: !!json.data.isPreSeason,
       finishedGws: json.data.finishedGws || 0,

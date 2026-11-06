@@ -1,12 +1,26 @@
 /**
- * Ai.gs — client for the Dahl Inference gateway (OpenAI-compatible)
+ * Ai.gs — AI gateway client (OpenAI-compatible)
  * HTCV FPL 2026-2027
  *
+ * PRIMARY: Mercury 3 by Inception Labs (api.inceptionlabs.ai)
+ *   – fast diffusion LM, OpenAI-compatible, Vietnamese-capable
+ *   – API key in Script Properties: INCEPTION_API_KEY
+ *
+ * FALLBACK: Dahl Inference free tier (inference.dahl.global)
+ *   – API key in Script Properties: DAHL_API_KEY
+ *   – Only tried when Mercury is unreachable / over quota
+ *
  * The AI layer is optional: every caller must cope with a failure, because the
- * free allowance can run out, the gateway can be down, and model ids rotate
- * with network capacity. The API key lives only in Script Properties
- * (DAHL_API_KEY) and is never logged or sent anywhere but the gateway.
+ * allowance can run out, the gateway can be down, and model ids rotate
+ * with network capacity.
  */
+
+// ─── Mercury 3 (Inception Labs) — Primary ────────────────────────────────────
+
+const INCEPTION_BASE_URL = "https://api.inceptionlabs.ai/v1";
+const INCEPTION_MODEL = "mercury-3";
+
+// ─── Dahl Inference — Fallback ───────────────────────────────────────────────
 
 const AI_BASE_URL = "https://inference.dahl.global";
 const AI_MODELS_TTL = 3600;     // seconds — how long the model list is trusted
@@ -15,20 +29,24 @@ const AI_FETCH_TIMEOUT_MS = 55000;
 // attempt can run a minute, and the browser gives up after 90 seconds.
 const AI_LATE_START_MS = 25000;
 
-// Models tried in this order when the gateway offers them. MiniMax is the only
-// one verified to answer on the free allowance; the other two are often at
-// "model_concurrency" capacity (HTTP 429, paid accounts are admitted first).
+// Models tried in this order when the Dahl gateway offers them.
 const AI_MODEL_PREFERENCE = [
   "MiniMaxAI/MiniMax-M2.7",
   "zai-org/GLM-5.3-Flash",
   "deepseek-ai/DeepSeek-V4-Flash-0731"
 ];
 
+// ─── Key helpers ─────────────────────────────────────────────────────────────
+
+function getInceptionKey_() {
+  return (PropertiesService.getScriptProperties().getProperty("INCEPTION_API_KEY") || "").trim();
+}
+
 function getAiKey_() {
   return (PropertiesService.getScriptProperties().getProperty("DAHL_API_KEY") || "").trim();
 }
 
-/** Model ids the gateway currently serves, preferred ones first. */
+/** Model ids the Dahl gateway currently serves, preferred ones first. */
 function getAiModels_() {
   const cache = CacheService.getScriptCache();
   const cached = cache.get("ai_models");
@@ -66,8 +84,57 @@ function plainText_(text) {
   return String(text || "").replace(/\*\*|__/g, "").replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/^\s*[-*]\s+/gm, "").replace(/^\s+|\s+$/g, "");
 }
 
+// ─── Mercury 3 call ──────────────────────────────────────────────────────────
+
 /**
- * One chat completion, falling back to the next model when a call fails.
+ * Try Mercury 3 first. Returns the same shape as callAi_ so callers don't care.
+ * Mercury is fast (~2-6s) and handles Vietnamese well.
+ */
+function callMercury_(messages, opts) {
+  const options = opts || {};
+  const key = getInceptionKey_();
+  if (!key) return null; // no key → skip, let callAi_ try Dahl
+
+  const started = Date.now();
+  let response;
+  try {
+    response = UrlFetchApp.fetch(INCEPTION_BASE_URL + "/chat/completions", {
+      method: "post",
+      contentType: "application/json",
+      headers: { Authorization: "Bearer " + key },
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        model: INCEPTION_MODEL,
+        messages: messages,
+        max_completion_tokens: options.maxTokens || 1500,
+        temperature: options.temperature === undefined ? 0.6 : options.temperature,
+        reasoning_effort: "none"
+      })
+    });
+  } catch (e) {
+    return null; // network error → fall through to Dahl
+  }
+
+  const code = response.getResponseCode();
+  if (code === 402) return { ok: false, text: "", model: INCEPTION_MODEL, ms: Date.now() - started, usage: null, error: "no_tokens" };
+  if (code === 401 || code === 403) return { ok: false, text: "", model: INCEPTION_MODEL, ms: Date.now() - started, usage: null, error: "auth" };
+  if (code !== 200) return null; // other errors → fall through to Dahl
+
+  let body;
+  try {
+    body = JSON.parse(response.getContentText());
+  } catch (e) {
+    return null;
+  }
+  const text = plainText_(stripThinking_(body.choices && body.choices[0] && body.choices[0].message && body.choices[0].message.content));
+  if (!text) return null; // empty → try Dahl
+  return { ok: true, text: text, model: INCEPTION_MODEL, ms: Date.now() - started, usage: body.usage || null, error: "" };
+}
+
+// ─── Unified call: Mercury first, Dahl fallback ─────────────────────────────
+
+/**
+ * One chat completion, trying Mercury 3 first, then falling back to Dahl models.
  *
  * @param {Array<{role: string, content: string}>} messages
  * @param {{maxTokens?: number, temperature?: number, startedAt?: number}} [opts] startedAt: when the whole
@@ -77,7 +144,18 @@ function plainText_(text) {
  */
 function callAi_(messages, opts) {
   const options = opts || {};
-  if (!getAiKey_()) return { ok: false, text: "", model: "", ms: 0, usage: null, error: "no_key" };
+
+  // 1. Try Mercury 3 (primary)
+  const mercury = callMercury_(messages, options);
+  if (mercury) return mercury; // either success or a definitive error (auth/quota)
+
+  // 2. Fallback to Dahl
+  if (!getAiKey_()) {
+    // No Dahl key either — and no Mercury key was the reason we're here
+    if (!getInceptionKey_()) return { ok: false, text: "", model: "", ms: 0, usage: null, error: "no_key" };
+    // Mercury key exists but call failed → report as generic failure
+    return { ok: false, text: "", model: INCEPTION_MODEL, ms: 0, usage: null, error: "failed" };
+  }
 
   let models;
   try {
