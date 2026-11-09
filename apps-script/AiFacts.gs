@@ -180,7 +180,7 @@ function h2hLead_(d) {
 function currentH2HScore_(managerId) {
   let live = null;
   try {
-    live = getLiveData();
+    live = getLiveDataFresh_();
   } catch (e) {
     return null;
   }
@@ -416,7 +416,7 @@ function leagueFacts_(managerName, state) {
   // The tabs on the website show the gameweek in progress already folded in; quote the same numbers.
   let live = null;
   try {
-    const payload = getLiveData();
+    const payload = getLiveDataFresh_();
     if (payload && payload.status === "success") live = payload.data;
   } catch (e) { /* settled tables only */ }
   const merged = mergeLiveTables_(tables.classic, tables.h2h, live);
