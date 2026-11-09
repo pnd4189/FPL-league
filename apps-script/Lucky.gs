@@ -4,14 +4,17 @@
  *
  * Only Shark Lâm (4403856) and Đại (1860254) get this. The seeds are the last
  * two digits of their latest played H2H score; the draws are the last 30 days
- * of the public XSMB (northern lottery) CSV. Lottery draws are random, so the
- * facts say so and the model must not promise a win.
+ * of the public XSMB (northern lottery) CSV. Any other number they ask about
+ * (00-99) gets its own real statistics from the same draws, so the model never
+ * has to say "no data" for a number. Lottery draws are random, so the facts
+ * say so and the model must not promise a win.
  */
 
 const LUCKY_MANAGER_IDS = [4403856, 1860254];
 const XSMB_CSV_URL = "https://raw.githubusercontent.com/khiemdoan/vietnam-lottery-xsmb-analysis/refs/heads/main/data/xsmb-2-digits.csv";
 const XSMB_WINDOW_DAYS = 30;
 const XSMB_CACHE_TTL = 1800; // seconds
+const LUCKY_MAX_ASKED = 6; // numbers looked up per question
 
 function isoDay_(ms) {
   return new Date(ms).toISOString().slice(0, 10);
@@ -86,30 +89,87 @@ function twoDigits_(n) {
   return String(n).padStart(2, "0");
 }
 
-/** Lucky-number pack for the chat; the same seeds the Lucky Numbers card shows. */
-function luckyFacts_(d) {
+/**
+ * True when the question names a number the way lottery talk does ("số 44", "con 07", "cặp 12-21",
+ * "lô 07", "đề 44"), even without a word like "may mắn" that the keyword router needs.
+ */
+function luckyNumberAsked_(question) {
+  return /(?<![\p{L}\p{N}])(?<!vấn\s+)(?:số|con|cặp|lô|đề|loto|bạch thủ|song thủ|đánh)\s*(?:số\s*)?\d{1,2}(?![\p{L}\p{N}])/iu.test(String(question || ""));
+}
+
+/**
+ * The 1-2 digit numbers a question asks about, as 0-99 and without repeats (at most MAX). Amounts of time,
+ * rounds, points or money ("7 ngày", "GW10", "50k") are not lottery numbers.
+ */
+function askedLuckyNumbers_(question) {
+  const text = String(question || "").toLowerCase()
+    .replace(/\d+[.,]\d+/g, " ")
+    .replace(/\d+\s*(?:ngày|tuần|tháng|lần|vòng|kỳ|điểm|phút|năm|gw|k|tr|đ|%)(?![\p{L}])/gu, " ")
+    .replace(/(?:gw|gameweek|vòng|tuần|top)\s*\d+/gu, " ");
+  const found = [];
+  const pattern = /(?<![\p{L}\p{N}.,])(\d{1,2})(?![\p{L}\p{N}]|[.,]\d)/gu;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const n = Number(match[1]);
+    if (found.indexOf(n) === -1) found.push(n);
+  }
+  return found.slice(0, LUCKY_MAX_ASKED);
+}
+
+/** What the draws say about one number: how often it came up, how it ranks among the 100, when it last came. */
+function luckyNumberText_(n, rows, counts) {
+  let last = -1;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].digits.indexOf(n) !== -1) { last = i; break; }
+  }
+  const rank = 1 + counts.filter(function (c) { return c > counts[n]; }).length;
+  const lastText = last === -1
+    ? "không ra lần nào trong " + rows.length + " ngày quay"
+    : last === rows.length - 1
+      ? "có ra ở kỳ quay gần nhất (" + rows[last].date + ")"
+      : "lần gần nhất ngày " + rows[last].date + ", cách " + (rows.length - 1 - last) + " kỳ quay";
+  return "số " + twoDigits_(n) + ": ra " + countDraws_(n, rows.slice(-7)) + " lần trong 7 ngày quay gần nhất, " +
+    countDraws_(n, rows.slice(-14)) + " lần trong 14 ngày quay gần nhất, " + counts[n] + " lần trong " + rows.length +
+    " ngày quay (hạng " + rank + "/100 số ra nhiều nhất); " + lastText;
+}
+
+/**
+ * Lucky-number pack for the chat: the seeds the Lucky Numbers card shows, the hottest numbers, and the real
+ * statistics of every number the question names.
+ */
+function luckyFacts_(d, question) {
   if (LUCKY_MANAGER_IDS.indexOf(Number(d.id)) === -1) {
     return "CON SỐ MAY MẮN: tính năng này chỉ bật cho Shark Lâm và Đại.";
   }
   const score = latestH2HScore_(d.id);
   const rows = getXsmbRecent_();
-  if (!score || !rows || !rows.length) return "CON SỐ MAY MẮN: chưa đọc được kết quả H2H hoặc dữ liệu XSMB.";
+  if (!rows || !rows.length) return "CON SỐ MAY MẮN: chưa đọc được dữ liệu XSMB.";
 
-  const recent = rows.slice(-7);
-  const seeds = [score.mine % 100, score.opp % 100];
-  const seedText = seeds.map(function (s) {
-    return "số " + twoDigits_(s) + ": ra " + countDraws_(s, recent) + " lần trong 7 ngày quay gần nhất, " +
-      countDraws_(s, rows) + " lần trong " + rows.length + " ngày quay";
-  }).join("; ");
+  const counts = [];
+  for (let n = 0; n < 100; n++) counts.push(countDraws_(n, rows));
+  const parts = [];
 
-  const hot = [];
-  for (let n = 0; n < 100; n++) hot.push({ n: n, c: countDraws_(n, rows) });
-  hot.sort(function (a, b) { return b.c - a.c || a.n - b.n; });
-  const hotText = hot.slice(0, 5).map(function (h) { return twoDigits_(h.n) + " (" + h.c + " lần)"; }).join(", ");
+  const asked = askedLuckyNumbers_(question);
+  if (asked.length) {
+    parts.push("SỐ ĐƯỢC HỎI (thống kê thật từ XSMB " + rows[0].date + " đến " + rows[rows.length - 1].date +
+      "; số 1 chữ số tính là 0 + số đó): " + asked.map(function (n) { return luckyNumberText_(n, rows, counts); }).join("; ") + ".");
+  }
 
-  return "CON SỐ MAY MẮN, lấy từ tỉ số H2H GW" + score.gw + (score.provisional ? " (đang đá, tạm tính)" : "") + " của " + d.manager + " " +
-    score.mine + " – " + score.opp + " " + score.oppName + " (cặp số " + twoDigits_(seeds[0]) + " và " + twoDigits_(seeds[1]) + "). " +
-    "Dữ liệu XSMB " + rows[0].date + " đến " + rows[rows.length - 1].date + ": " + seedText + ". " +
-    "5 số ra nhiều nhất trong " + rows.length + " ngày quay: " + hotText + ". " +
-    "LƯU Ý: XSMB là xổ số quay ngẫu nhiên, số ra nhiều trước đây không báo trước kết quả; không hứa trúng.";
+  if (score) {
+    const seeds = [score.mine % 100, score.opp % 100];
+    parts.push("Cặp số lấy từ tỉ số H2H GW" + score.gw + (score.provisional ? " (đang đá, tạm tính)" : "") + " của " + d.manager + " " +
+      score.mine + " – " + score.opp + " " + score.oppName + " là " + twoDigits_(seeds[0]) + " và " + twoDigits_(seeds[1]) + ": " +
+      seeds.map(function (n) { return luckyNumberText_(n, rows, counts); }).join("; ") + ".");
+  } else if (!asked.length) {
+    return "CON SỐ MAY MẮN: chưa đọc được kết quả H2H.";
+  }
+
+  const hot = counts.map(function (c, n) { return { n: n, c: c }; })
+    .sort(function (a, b) { return b.c - a.c || a.n - b.n; });
+  parts.push("5 số ra nhiều nhất trong " + rows.length + " ngày quay: " +
+    hot.slice(0, 5).map(function (h) { return twoDigits_(h.n) + " (" + h.c + " lần)"; }).join(", ") + ".");
+
+  return "CON SỐ MAY MẮN (mỗi kỳ quay có 27 số, chỉ lấy 2 chữ số cuối; \"ra N lần\" là số kỳ quay có số đó xuất hiện). " +
+    parts.join(" ") +
+    " LƯU Ý: XSMB là xổ số quay ngẫu nhiên, số ra nhiều trước đây không báo trước kết quả; không hứa trúng.";
 }

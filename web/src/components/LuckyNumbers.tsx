@@ -643,7 +643,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
               type="text"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Hỏi thêm về con số may mắn..."
+              placeholder="Hỏi số bất kỳ, vd: số 44 thế nào?"
               maxLength={300}
               className="flex-1 min-w-0 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
               style={{

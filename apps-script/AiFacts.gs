@@ -18,7 +18,7 @@ const AI_FACT_TTL = 600; // seconds — entry history and league table reuse
 // "bạn" (you) and "mua" (buy) as "mùa" (season).
 const AI_TOPICS = {
   chips: { any: ["wildcard", "wild card", "wc", "free hit", "freehit", "fh", "bench boost", "bb", "triple captain", "triple", "tc", "chip", "chips", "3xc", "x3", "nhân 3", "nhân ba", "bật chip"] },
-  lucky: { any: ["may mắn", "số đẹp", "xsmb", "xổ số", "lottery"], accented: ["lô"] },
+  lucky: { any: ["may mắn", "số đẹp", "xsmb", "xổ số", "lottery", "cặp số", "soi cầu", "kqxs", "loto", "lô đề", "bạch thủ", "song thủ", "đánh đề"], accented: ["lô"] },
   captain: { any: ["captain", "cap", "vc", "đội trưởng", "đội phó", "đeo băng"] },
   h2h: { any: ["h2h", "vs", "đối thủ", "đối đầu"], accented: ["kèo"] },
   transfers: { any: ["transfer", "transfers", "hit", "ft", "bank", "chuyển nhượng", "thay người", "đổi người", "lượt chuyển", "ngân sách", "-4", "trừ điểm"], accented: ["bán", "mua", "giữ", "tiền", "thay", "đổi"] },
@@ -78,7 +78,8 @@ function fuzzyMatches_(plain, term) {
  */
 function routeQuestion_(question) {
   let raw = String(question || "").toLowerCase();
-  let plain = normalizeText_(raw);
+  // "cặp 12-21" (a pair of numbers) must not read as "cap" (captain) once the accents are stripped.
+  let plain = normalizeText_(raw).replace(/(?<![a-z0-9])cap(?=\s+(?:so\s+)?\d|\s+so(?![a-z0-9]))/g, " ");
   const topics = [];
   const keys = ["chips"].concat(Object.keys(AI_TOPICS).filter(function (k) { return k !== "chips"; }));
   for (const key of keys) {
@@ -470,7 +471,7 @@ function buildAiFacts_(d, topics, mentioned, question, withLiveScore) {
 
   const parts = ["HLV " + d.manager + ", vòng sắp tới GW" + d.gw + ", tiền trong túi ước tính £" + d.bank +
     "m. (đ = điểm dự kiến của trợ lý, độ khó 1 dễ - 5 khó)"];
-  if (has("lucky")) parts.push(luckyFacts_(d));
+  if (has("lucky")) parts.push(luckyFacts_(d, question));
   if (has("captain")) parts.push(captainFacts_(d));
   if (has("h2h") && withLiveScore) parts.push(currentH2HFacts_(d));
   if (has("h2h")) parts.push(h2hFacts_(d));
