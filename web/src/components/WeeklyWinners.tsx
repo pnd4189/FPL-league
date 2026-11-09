@@ -5,6 +5,7 @@ import { PlayerAvatar } from './PlayerAvatar';
 import { SquadPopupWrap } from './SquadTooltip';
 import { shareAmount } from '../services/prizes';
 import { Reveal } from './scroll-reveal';
+import { RankCard, RankCardList } from './RankCards';
 
 interface WeeklyWinnersProps {
   winners: WeeklyWinner[];
@@ -321,17 +322,58 @@ export const WeeklyWinners: React.FC<WeeklyWinnersProps> = ({
             </div>
 
             {/* 14 Managers Full Round Table */}
+            <RankCardList padded={false} caption={`Bảng điểm Gameweek ${selectedGW} · chạm vào thẻ để xem hồ sơ HLV`}>
+              {roundRankings.map((p, idx) => {
+                const rankNum = idx + 1;
+                const isWinnerRow = isPlayed && p.points === top1Score && top1Score > 0;
+                const cap = captainOf(p.id);
+                return (
+                  <RankCard
+                    key={p.id}
+                    rank={isWinnerRow && isTie ? 1 : rankNum}
+                    highlight={isWinnerRow ? 'primary' : undefined}
+                    avatar={
+                      <PlayerAvatar
+                        name={p.manager}
+                        avatarUrl={p.avatarUrl}
+                        clubLogoUrl={p.clubLogoUrl}
+                        favoriteClub={p.favoriteClub}
+                        rank={rankNum}
+                        size="sm"
+                      />
+                    }
+                    name={p.manager}
+                    team={p.team}
+                    primary={
+                      <SquadPopupWrap live={live} gw={selectedGW} managerId={p.id}>
+                        <span>{p.hasPlayed ? p.points : '-'}</span>
+                      </SquadPopupWrap>
+                    }
+                    primaryUnit="điểm"
+                    stats={[
+                      ...(cap
+                        ? [{ label: cap.mult === 3 ? 'TC' : 'C', value: `${cap.name} · ${cap.pts * cap.mult}` }]
+                        : []),
+                      ...(isWinnerRow
+                        ? [
+                            {
+                              label: 'Thưởng',
+                              value: `+${prizePerWinner.toLocaleString('vi-VN')}đ${isTie ? ' (chia đều)' : ''}`,
+                              tone: 'primary' as const,
+                            },
+                          ]
+                        : []),
+                    ]}
+                    onOpen={() => onSelectPlayer && onSelectPlayer(p.id)}
+                  />
+                );
+              })}
+            </RankCardList>
+
             <div
-              className="overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
+              className="hidden md:block overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
               style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
             >
-              <div
-                className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
-                style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
-              >
-                <span>Bảng điểm Gameweek {selectedGW}</span>
-                <span>Vuốt ngang để xem đầy đủ</span>
-              </div>
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
                   className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"

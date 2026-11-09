@@ -5,6 +5,17 @@ import { WeeklyWinner, MonthlyAward, ClassicStanding, H2HStanding } from '../typ
 import { PlayerAvatar } from './PlayerAvatar';
 import { isWinner, prizeShare } from '../services/prizes';
 import { Reveal } from './scroll-reveal';
+import { DetailGrid, RankCard, RankCardList } from './RankCards';
+
+const vnd = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
+
+/** 350000 -> "350k", 1350000 -> "1,35tr": the way the league writes amounts, short enough for a phone card. */
+const compactVnd = (n: number): string =>
+  n >= 1000000
+    ? `${String(Math.round(n / 10000) / 100).replace('.', ',')}tr`
+    : n > 0
+    ? `${Math.round(n / 1000)}k`
+    : '0';
 
 interface PrizePoolProps {
   weeklyWinners?: WeeklyWinner[];
@@ -213,17 +224,70 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
             </div>
 
             {/* 14 Managers Full Prize Table */}
+            <RankCardList padded={false} caption="Bảng tiền thưởng 14 HLV · chạm vào thẻ để xem chi tiết">
+              {managerEarnings.map((p, idx) => {
+                const rankNum = idx + 1;
+                const isRank1 = rankNum === 1 && p.totalWon > 0;
+                const seasonAndCup = p.cupEarnings + p.seasonClassicEarnings + p.seasonH2HEarnings;
+                return (
+                  <RankCard
+                    key={p.id}
+                    rank={rankNum}
+                    highlight={isRank1 ? 'gold' : undefined}
+                    avatar={
+                      <PlayerAvatar
+                        name={p.manager}
+                        avatarUrl={p.avatarUrl}
+                        clubLogoUrl={p.clubLogoUrl}
+                        favoriteClub={p.favoriteClub}
+                        rank={rankNum}
+                        size="sm"
+                      />
+                    }
+                    name={p.manager}
+                    team={p.team}
+                    primary={compactVnd(p.totalWon)}
+                    primaryUnit="VNĐ"
+                    primaryTone="gold"
+                    stats={[
+                      ...(p.weeklyCount > 0 ? [{ label: 'Tuần', value: `${p.weeklyCount} lần`, tone: 'primary' as const }] : []),
+                      ...(p.monthlyClassicCount > 0
+                        ? [{ label: 'Classic tháng', value: `${p.monthlyClassicCount} lần`, tone: 'primary' as const }]
+                        : []),
+                      ...(p.monthlyH2HCount > 0
+                        ? [{ label: 'H2H tháng', value: `${p.monthlyH2HCount} lần`, tone: 'secondary' as const }]
+                        : []),
+                      ...(seasonAndCup > 0 ? [{ label: 'Cúp / Mùa', value: vnd(seasonAndCup), tone: 'gold' as const }] : []),
+                    ]}
+                    detail={
+                      <div className="space-y-2">
+                        <p className="text-[14px] font-mono" style={{ color: 'var(--text-muted)' }}>
+                          Tổng thưởng tích lũy{' '}
+                          <b className="font-bold tabular-nums" style={{ color: 'var(--accent-gold)' }}>
+                            {vnd(p.totalWon)}
+                          </b>
+                        </p>
+                        <DetailGrid
+                          columns={2}
+                          items={[
+                            { label: 'Nhất tuần', value: vnd(p.weeklyEarnings) },
+                            { label: 'Classic tháng', value: vnd(p.monthlyClassicEarnings) },
+                            { label: 'H2H tháng', value: vnd(p.monthlyH2HEarnings) },
+                            { label: 'Cúp / Mùa', value: vnd(seasonAndCup) },
+                          ]}
+                        />
+                      </div>
+                    }
+                    onOpen={() => onSelectPlayer && onSelectPlayer(p.id)}
+                  />
+                );
+              })}
+            </RankCardList>
+
             <div
-              className="overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
+              className="hidden md:block overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
               style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
             >
-              <div
-                className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
-                style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
-              >
-                <span>Bảng tiền thưởng 14 HLV</span>
-                <span>Vuốt ngang xem chi tiết</span>
-              </div>
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
                   className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"
@@ -433,7 +497,28 @@ export const PrizePool: React.FC<PrizePoolProps> = ({
               </span>
             </div>
 
-            <div className="overflow-x-auto touch-scroll">
+            <ul className="md:hidden divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
+              {PRIZE_STRUCTURE.prizes.map((p, idx) => (
+                <li key={idx} className="px-5 py-3.5 space-y-1" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-display font-bold text-[16px] leading-snug" style={{ color: 'var(--text-main)' }}>
+                      {p.title}
+                    </p>
+                    <p className="flex-shrink-0 font-mono font-bold text-[16px] tabular-nums" style={{ color: 'var(--accent-primary)' }}>
+                      {p.total.toLocaleString('vi-VN')}đ
+                    </p>
+                  </div>
+                  <p className="text-[14px] font-mono tabular-nums" style={{ color: 'var(--accent-secondary)' }}>
+                    {p.amount.toLocaleString('vi-VN')}đ × {p.count}
+                  </p>
+                  <p className="text-[14px] leading-snug" style={{ color: 'var(--text-muted)' }}>
+                    {p.desc}
+                  </p>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden md:block overflow-x-auto touch-scroll">
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
                   className="font-mono text-[13px] uppercase tracking-wider border-b"

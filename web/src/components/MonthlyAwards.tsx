@@ -7,6 +7,7 @@ import { fetchH2HSchedule } from '../services/fplApi';
 import { MonthRange } from '../services/liveStandings';
 import { SquadPopupWrap } from './SquadTooltip';
 import { Reveal } from './scroll-reveal';
+import { DetailGrid, RankCard, RankCardList } from './RankCards';
 
 interface MonthlyAwardsProps {
   awards: MonthlyAward[];
@@ -451,17 +452,60 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                 </div>
 
                 {/* Classic Monthly Table */}
+                <RankCardList padded={false} caption={`Classic ${selectedMonthName} · chạm vào thẻ để xem hồ sơ HLV`}>
+                  {classicMonthlyRankings.map((p, idx) => {
+                    const isClassicWinner = isClassicPlayed && p.monthTotal === topClassicScore && topClassicScore > 0;
+                    const rankNum = isClassicWinner && isClassicTie ? 1 : idx + 1;
+                    return (
+                      <RankCard
+                        key={p.id}
+                        rank={rankNum}
+                        highlight={isClassicWinner ? 'primary' : undefined}
+                        avatar={
+                          <PlayerAvatar
+                            name={p.manager}
+                            avatarUrl={p.avatarUrl}
+                            clubLogoUrl={p.clubLogoUrl}
+                            favoriteClub={p.favoriteClub}
+                            rank={rankNum}
+                            size="sm"
+                          />
+                        }
+                        name={p.manager}
+                        team={p.team}
+                        primary={p.playedCount > 0 ? p.monthTotal : '-'}
+                        primaryUnit="điểm tháng"
+                        stats={[
+                          ...p.gwBreakdown.map(({ gw, score }) => ({
+                            label: `GW${gw}`,
+                            value: (
+                              <SquadPopupWrap live={live} gw={gw} managerId={p.id}>
+                                <span>{score !== null ? score : '-'}</span>
+                              </SquadPopupWrap>
+                            ),
+                            tone: gw === currentGW && isLive ? ('tertiary' as const) : undefined,
+                          })),
+                          { label: 'TB', value: p.average },
+                          ...(isClassicWinner
+                            ? [
+                                {
+                                  label: 'Thưởng',
+                                  value: `+${classicPrizeEach.toLocaleString('vi-VN')}đ${isClassicTie ? ' (chia đều)' : ''}`,
+                                  tone: 'primary' as const,
+                                },
+                              ]
+                            : []),
+                        ]}
+                        onOpen={() => onSelectPlayer && onSelectPlayer(p.id)}
+                      />
+                    );
+                  })}
+                </RankCardList>
+
                 <div
-                  className="overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
+                  className="hidden md:block overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
                   style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
                 >
-                  <div
-                    className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
-                    style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
-                  >
-                    <span>Classic {selectedMonthName}</span>
-                    <span>Vuốt ngang xem điểm từng vòng</span>
-                  </div>
                   <table className="w-full border-collapse text-left text-xs tabular-nums">
                     <thead
                       className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"
@@ -730,17 +774,105 @@ export const MonthlyAwards: React.FC<MonthlyAwardsProps> = ({
                 </div>
 
                 {/* H2H Monthly Table */}
+                <RankCardList padded={false} caption={`H2H ${selectedMonthName} · chạm vào thẻ để xem kết quả từng vòng`}>
+                  {h2hMonthlyRankings.map((p, idx) => {
+                    const isH2HWinner =
+                      isH2HPlayed &&
+                      p.h2hPts === topH2HPts &&
+                      p.gd === topH2HGD &&
+                      p.gf === topH2HGF &&
+                      p.monthClassicTotal === topH2HClassic &&
+                      topH2HPts > 0;
+                    const rankNum = isH2HWinner && isH2HTie ? 1 : idx + 1;
+                    const gd = p.pCount > 0 ? (p.gd > 0 ? `+${p.gd}` : `${p.gd}`) : '-';
+                    const played = p.gwResults.filter((gr) => gr.result !== '-');
+                    return (
+                      <RankCard
+                        key={p.id}
+                        rank={rankNum}
+                        highlight={isH2HWinner ? 'secondary' : undefined}
+                        avatar={
+                          <PlayerAvatar
+                            name={p.manager}
+                            avatarUrl={p.avatarUrl}
+                            clubLogoUrl={p.clubLogoUrl}
+                            favoriteClub={p.favoriteClub}
+                            rank={rankNum}
+                            size="sm"
+                          />
+                        }
+                        name={p.manager}
+                        team={p.team}
+                        primary={p.pCount > 0 ? p.h2hPts : '-'}
+                        primaryUnit="điểm H2H"
+                        primaryTone="secondary"
+                        stats={[
+                          { label: 'Trận', value: p.pCount },
+                          { label: 'T', value: p.won, tone: 'primary' },
+                          { label: 'H', value: p.drawn },
+                          { label: 'B', value: p.lost, tone: 'tertiary' },
+                          { label: 'GD', value: gd, tone: p.pCount > 0 && p.gd > 0 ? 'primary' : p.pCount > 0 && p.gd < 0 ? 'tertiary' : undefined },
+                          ...(isH2HWinner
+                            ? [
+                                {
+                                  label: 'Thưởng',
+                                  value: `+${h2hPrizeEach.toLocaleString('vi-VN')}đ${isH2HTie ? ' (chia đều)' : ''}`,
+                                  tone: 'primary' as const,
+                                },
+                              ]
+                            : []),
+                        ]}
+                        detail={
+                          <div className="space-y-2.5">
+                            <DetailGrid
+                              columns={2}
+                              items={[
+                                { label: 'GF', value: p.gf > 0 ? p.gf : '-' },
+                                { label: 'GA', value: p.ga > 0 ? p.ga : '-' },
+                              ]}
+                            />
+                            {played.length > 0 && (
+                              <ul className="space-y-1.5">
+                                {played.map((gr) => (
+                                  <li key={gr.gw} className="flex items-center justify-between gap-3 text-[14px]">
+                                    <span className="min-w-0 truncate" style={{ color: 'var(--text-muted)' }}>
+                                      GW{gr.gw} · vs {gr.oppManager}
+                                    </span>
+                                    <span
+                                      className="flex-shrink-0 rounded-full px-2.5 py-0.5 font-mono font-bold tabular-nums"
+                                      style={{
+                                        backgroundColor:
+                                          gr.result === 'W'
+                                            ? 'var(--accent-primary-soft)'
+                                            : gr.result === 'L'
+                                            ? 'var(--accent-tertiary-soft)'
+                                            : 'var(--bg-elevated)',
+                                        color:
+                                          gr.result === 'W'
+                                            ? 'var(--accent-primary)'
+                                            : gr.result === 'L'
+                                            ? 'var(--accent-tertiary)'
+                                            : 'var(--text-muted)',
+                                      }}
+                                    >
+                                      {gr.result} {gr.myScore}-{gr.oppScore}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        }
+                        onOpen={() => onSelectPlayer && onSelectPlayer(p.id)}
+                      />
+                    );
+                  })}
+                </RankCardList>
+
                 <div
-                  className="overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
+                  className="hidden md:block overflow-x-auto rounded-2xl border touch-scroll max-h-[580px]"
                   style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-card-solid)' }}
                 >
-                  <div
-                    className="md:hidden flex items-center justify-between px-3.5 py-2 border-b text-[13px] font-mono"
-                    style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}
-                  >
-                    <span>H2H {selectedMonthName}</span>
-                    <span>Vuốt ngang xem kết quả đối đầu</span>
-                  </div>
                   <table className="w-full border-collapse text-left text-xs tabular-nums">
                     <thead
                       className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider border-b"

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Trophy, Search, ArrowLeftRight } from 'lucide-react';
+import { Trophy, Search } from 'lucide-react';
 import { ClassicStanding, LiveGwData } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { SquadPopupWrap } from './SquadTooltip';
 import { Reveal } from './scroll-reveal';
+import { DetailGrid, RankCard, RankCardList, RankTone } from './RankCards';
 
 interface ClassicTableProps {
   standings: ClassicStanding[];
@@ -28,6 +29,9 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
   });
 
   const displayedGWs = Array.from({ length: 38 }, (_, i) => i + 1);
+  const leaderTotal = standings.reduce((max, p) => Math.max(max, p.total), 0);
+  const gwTone = (pts: number): RankTone | undefined =>
+    pts >= 75 ? 'primary' : pts >= 65 ? 'secondary' : pts <= 35 && pts > 0 ? 'tertiary' : undefined;
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -95,21 +99,59 @@ export const ClassicTable: React.FC<ClassicTableProps> = ({
       <Reveal delayMs={50}>
         <div className="bezel-shell">
           <div className="bezel-core overflow-hidden">
-            <div
-              className="md:hidden flex items-center justify-between px-4 py-2 text-[13px] font-mono"
-              style={{
-                borderBottom: '1px solid var(--border-subtle)',
-                color: 'var(--text-muted)',
-              }}
-            >
-              <span>14 HLV tranh tài</span>
-              <span className="inline-flex items-center gap-1">
-                <ArrowLeftRight className="w-3 h-3" strokeWidth={1.5} />
-                Vuốt ngang xem 38 vòng
-              </span>
-            </div>
+            <RankCardList caption={`${filteredStandings.length} HLV · chạm vào thẻ để xem điểm từng vòng`}>
+              {filteredStandings.map((p) => {
+                const gwPts = p.scores[currentGW - 1];
+                const played = p.scores
+                  .map((pts, i) => ({ gw: i + 1, pts }))
+                  .filter((x): x is { gw: number; pts: number } => x.pts !== null && x.pts !== undefined);
+                return (
+                  <RankCard
+                    key={p.id}
+                    rank={p.rank}
+                    highlight={p.rank === 1 ? 'gold' : undefined}
+                    avatar={
+                      <PlayerAvatar
+                        name={p.manager}
+                        avatarUrl={p.avatarUrl}
+                        clubLogoUrl={p.clubLogoUrl}
+                        favoriteClub={p.favoriteClub}
+                        size="sm"
+                      />
+                    }
+                    name={p.manager}
+                    team={p.team}
+                    primary={p.total}
+                    primaryUnit="điểm"
+                    stats={[
+                      {
+                        label: `GW${currentGW}`,
+                        value: (
+                          <SquadPopupWrap live={live} gw={currentGW} managerId={p.id}>
+                            <span>{gwPts === null || gwPts === undefined ? '-' : gwPts}</span>
+                          </SquadPopupWrap>
+                        ),
+                        tone: isLive ? 'tertiary' : 'secondary',
+                      },
+                      { label: 'TB', value: p.average },
+                      { label: 'Cao nhất', value: p.bestGW?.pts || 0 },
+                      ...(leaderTotal > p.total ? [{ label: 'Cách đầu', value: `-${leaderTotal - p.total}` }] : []),
+                    ]}
+                    detail={
+                      played.length ? (
+                        <DetailGrid
+                          columns={6}
+                          items={played.map((x) => ({ label: `V${x.gw}`, value: x.pts, tone: gwTone(x.pts) }))}
+                        />
+                      ) : undefined
+                    }
+                    onOpen={() => onSelectPlayer(p.id)}
+                  />
+                );
+              })}
+            </RankCardList>
 
-            <div className="overflow-x-auto max-h-[640px] touch-scroll">
+            <div className="hidden md:block overflow-x-auto max-h-[640px] touch-scroll">
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
                   className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider"

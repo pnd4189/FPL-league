@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Swords, Trophy, ChevronLeft, ChevronRight, ArrowLeftRight } from 'lucide-react';
+import { Swords, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { H2HStanding, H2HMatch, LiveGwData, H2HScheduleRow } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { INITIAL_PLAYERS } from '../data/initialData';
 import { SquadPopupWrap } from './SquadTooltip';
 import { fetchH2HSchedule } from '../services/fplApi';
 import { Reveal } from './scroll-reveal';
+import { DetailGrid, RankCard, RankCardList } from './RankCards';
 
 interface H2HArenaProps {
   standings: H2HStanding[];
@@ -355,13 +356,54 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                   Xếp theo luật chính thức của FPL: Điểm H2H trước, tổng điểm Classic sau.
                 </p>
               </div>
-              <span className="md:hidden inline-flex items-center gap-1 text-[13px] font-mono" style={{ color: 'var(--text-faint)' }}>
-                <ArrowLeftRight className="w-3 h-3" strokeWidth={1.5} />
-                Vuốt ngang
-              </span>
             </div>
 
-            <div className="overflow-x-auto max-h-[620px] touch-scroll">
+            <RankCardList caption={`${standings.length} HLV · chạm vào thẻ để xem chi tiết`}>
+              {standings.map((p) => {
+                const gd = p.goalDifference > 0 ? `+${p.goalDifference}` : `${p.goalDifference}`;
+                return (
+                  <RankCard
+                    key={p.id}
+                    rank={p.rank}
+                    highlight={p.rank === 1 ? 'gold' : undefined}
+                    avatar={
+                      <PlayerAvatar
+                        name={p.manager}
+                        avatarUrl={p.avatarUrl}
+                        clubLogoUrl={p.clubLogoUrl}
+                        favoriteClub={p.favoriteClub}
+                        size="sm"
+                      />
+                    }
+                    name={p.manager}
+                    team={p.team}
+                    primary={p.points}
+                    primaryUnit="điểm H2H"
+                    primaryTone="secondary"
+                    stats={[
+                      { label: 'Trận', value: p.played },
+                      { label: 'T', value: p.won, tone: 'primary' },
+                      { label: 'H', value: p.drawn },
+                      { label: 'B', value: p.lost, tone: 'tertiary' },
+                      { label: 'GD', value: gd },
+                    ]}
+                    detail={
+                      <DetailGrid
+                        items={[
+                          { label: 'GF', value: p.pointsFor },
+                          { label: 'GA', value: p.pointsAgainst },
+                          { label: 'GD', value: gd },
+                          { label: 'Classic', value: p.classicTotal, tone: 'primary' },
+                        ]}
+                      />
+                    }
+                    onOpen={() => onSelectPlayer(p.id)}
+                  />
+                );
+              })}
+            </RankCardList>
+
+            <div className="hidden md:block overflow-x-auto max-h-[620px] touch-scroll">
               <table className="w-full border-collapse text-left text-xs tabular-nums">
                 <thead
                   className="font-mono text-[13px] sticky top-0 z-20 uppercase tracking-wider"

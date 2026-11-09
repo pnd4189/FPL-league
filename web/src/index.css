@@ -347,6 +347,21 @@
   transform: translateY(0);
 }
 
+/* Detail revealed under a phone ranking card: transform and opacity only. */
+.rank-detail {
+  animation: rank-detail-in 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes rank-detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-item {
     opacity: 1;
