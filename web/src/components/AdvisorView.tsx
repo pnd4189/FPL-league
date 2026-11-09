@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { INITIAL_PLAYERS } from '../data/initialData';
 import { fetchAdvisor, fetchAdvisorHunt } from '../services/fplApi';
-import { AdvisorData, AdvisorFixture, AdvisorPlayer } from '../types';
+import { AdvisorData, AdvisorFixture, AdvisorPlayer, LiveGwData } from '../types';
+import { currentRoundH2H } from '../services/liveStandings';
 import { AdvisorReview } from './AdvisorReview';
 import { LuckyNumbers } from './LuckyNumbers';
 import { isLuckyEligible } from '../services/xsmbService';
@@ -145,6 +146,10 @@ const SectionCard: React.FC<{
 export interface AdvisorViewProps {
   managerId?: number;
   upcomingGW?: number | null;
+  /** Live payload shared with the H2H tab, so this tab shows the same score for the current round. */
+  live?: LiveGwData | null;
+  /** The first live load has finished, successfully or not. */
+  liveReady?: boolean;
   onManagerChange?: (id: number) => void;
   onOpenAiChat?: (prompt?: string) => void;
 }
@@ -152,6 +157,8 @@ export interface AdvisorViewProps {
 export const AdvisorView: React.FC<AdvisorViewProps> = ({
   managerId: controlledManagerId,
   upcomingGW = null,
+  live = null,
+  liveReady = false,
   onManagerChange,
   onOpenAiChat,
 }) => {
@@ -217,6 +224,7 @@ export const AdvisorView: React.FC<AdvisorViewProps> = ({
 
   const selectedManagerName = INITIAL_PLAYERS.find(p => p.id === managerId)?.manager || 'HLV';
   const targetGw = advice?.gw ?? upcomingGW;
+  const round = currentRoundH2H(managerId, live);
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -371,13 +379,31 @@ export const AdvisorView: React.FC<AdvisorViewProps> = ({
 
           <SectionCard
             icon={<Swords className="w-4 h-4" strokeWidth={1.6} style={{ color: 'var(--accent-secondary)' }} />}
-            title={advice.opponent ? `Tương quan đối đầu H2H trước ${advice.opponent.manager}` : 'Tương quan đối đầu H2H'}
+            title={advice.opponent ? `Tương quan đối đầu H2H GW${advice.gw} trước ${advice.opponent.manager}` : 'Tương quan đối đầu H2H'}
             hint="So sánh các nhân tố khác biệt (differentials) giữa hai đội. Cầu thủ trùng nhau ở cả hai đội hình đã được lược bỏ."
           >
+            {round && (
+              <div className="surface-well px-4 py-3 mb-4 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm font-mono tabular-nums">
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Tỉ số H2H GW{round.gw} · {round.isLive ? 'đang đá, tạm tính' : 'đã chốt'}
+                </span>
+                <div>
+                  <span className="font-bold" style={{ color: 'var(--accent-primary)' }}>
+                    {selectedManagerName} {round.mine}
+                  </span>
+                  <span className="mx-2" style={{ color: 'var(--text-faint)' }}>
+                    –
+                  </span>
+                  <span className="font-bold" style={{ color: 'var(--accent-tertiary)' }}>
+                    {round.opp} {round.oppName}
+                  </span>
+                </div>
+              </div>
+            )}
             {advice.opponent ? (
               <div className="space-y-4">
                 <div className="surface-well px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm font-mono tabular-nums">
-                  <span style={{ color: 'var(--text-muted)' }}>Điểm dự phóng vòng tới</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Điểm dự phóng GW{advice.gw} (vòng tới)</span>
                   <div>
                     <span className="font-bold" style={{ color: 'var(--accent-primary)' }}>
                       {advice.manager} {advice.opponent.myProjected}
@@ -427,7 +453,7 @@ export const AdvisorView: React.FC<AdvisorViewProps> = ({
 
           {isLuckyEligible(managerId) && (
             <Reveal delayMs={70}>
-              <LuckyNumbers managerId={managerId} />
+              <LuckyNumbers managerId={managerId} live={live} liveReady={liveReady} />
             </Reveal>
           )}
 

@@ -45,17 +45,25 @@ function getXsmbRecent_() {
 }
 
 /**
- * Latest H2H match of a manager that has a real score: gameweek, own score, opponent score and id.
- * A gameweek counts as played from its deadline, when it still reads 0-0, so such a match is
- * skipped and the previous gameweek stays the latest result (same rule as the web card).
+ * Latest H2H result of a manager that has a real score: gameweek, own score, opponent score and name.
+ * The round the H2H tab shows comes from the live payload, exactly like that tab: FPL's league endpoint
+ * (the schedule) lags a running round by hours and gave a different score. The schedule only supplies
+ * earlier rounds, or everything when the live payload is unavailable. A gameweek reads 0-0 from its
+ * deadline until the first match, so such a round is skipped (same rule as the web card).
  */
 function latestH2HScore_(managerId) {
+  const live = currentH2HScore_(managerId);
+  if (live && (live.mine > 0 || live.opp > 0)) {
+    return { gw: live.gw, mine: live.mine, opp: live.opp, oppName: live.oppName, provisional: live.provisional };
+  }
+
   const schedule = getH2HSchedule();
   if (!schedule || schedule.status !== "success") return null;
   const id = String(managerId);
   const mine = schedule.data.matches
     .filter(function (m) {
-      return m.played && (m.homePts > 0 || m.awayPts > 0) && (String(m.homeId) === id || String(m.awayId) === id);
+      return m.played && (!live || m.gw < live.gw) && (m.homePts > 0 || m.awayPts > 0) &&
+        (String(m.homeId) === id || String(m.awayId) === id);
     })
     .sort(function (a, b) { return b.gw - a.gw; });
   if (!mine.length) return null;
@@ -65,7 +73,8 @@ function latestH2HScore_(managerId) {
     gw: m.gw,
     mine: isHome ? m.homePts : m.awayPts,
     opp: isHome ? m.awayPts : m.homePts,
-    oppId: isHome ? m.awayId : m.homeId
+    oppName: getManagerName(isHome ? m.awayId : m.homeId),
+    provisional: false
   };
 }
 
@@ -98,8 +107,8 @@ function luckyFacts_(d) {
   hot.sort(function (a, b) { return b.c - a.c || a.n - b.n; });
   const hotText = hot.slice(0, 5).map(function (h) { return twoDigits_(h.n) + " (" + h.c + " lần)"; }).join(", ");
 
-  return "CON SỐ MAY MẮN, lấy từ tỉ số H2H GW" + score.gw + " của " + d.manager + " " + score.mine + " – " + score.opp +
-    " " + getManagerName(score.oppId) + " (cặp số " + twoDigits_(seeds[0]) + " và " + twoDigits_(seeds[1]) + "). " +
+  return "CON SỐ MAY MẮN, lấy từ tỉ số H2H GW" + score.gw + (score.provisional ? " (đang đá, tạm tính)" : "") + " của " + d.manager + " " +
+    score.mine + " – " + score.opp + " " + score.oppName + " (cặp số " + twoDigits_(seeds[0]) + " và " + twoDigits_(seeds[1]) + "). " +
     "Dữ liệu XSMB " + rows[0].date + " đến " + rows[rows.length - 1].date + ": " + seedText + ". " +
     "5 số ra nhiều nhất trong " + rows.length + " ngày quay: " + hotText + ". " +
     "LƯU Ý: XSMB là xổ số quay ngẫu nhiên, số ra nhiều trước đây không báo trước kết quả; không hứa trúng.";

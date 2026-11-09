@@ -10,6 +10,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { askAdvisorChat } from '../services/fplApi';
+import { LiveGwData } from '../types';
 import { INITIAL_PLAYERS } from '../data/initialData';
 import { isLuckyEligible } from '../services/xsmbService';
 import { LuckyNumbers } from './LuckyNumbers';
@@ -38,6 +39,9 @@ export interface AdvisorChatProps {
   managerId: number;
   onManagerChange: (id: number) => void;
   upcomingGW?: number | null;
+  /** Same live payload as the H2H tab, for the lucky numbers card. */
+  live: LiveGwData | null;
+  liveReady: boolean;
   queuedPrompt?: string | null;
   onConsumePrompt?: () => void;
   onOpenAdvisorTab?: () => void;
@@ -49,6 +53,8 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
   managerId,
   onManagerChange,
   upcomingGW = null,
+  live,
+  liveReady,
   queuedPrompt = null,
   onConsumePrompt,
   onOpenAdvisorTab,
@@ -416,7 +422,7 @@ export const AdvisorChat: React.FC<AdvisorChatProps> = ({
                 </div>
 
                 {isLuckyEligible(managerId) && (
-                  <LuckyNumbers managerId={managerId} compact onAsk={ask} />
+                  <LuckyNumbers managerId={managerId} compact onAsk={ask} live={live} liveReady={liveReady} />
                 )}
 
                 <div>

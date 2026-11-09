@@ -136,6 +136,35 @@ export function rankH2HStandings(rows: H2HStanding[]): H2HStanding[] {
   });
 }
 
+export interface RoundH2HScore {
+  gw: number;
+  /** FPL has not finalised the gameweek yet, so the score is provisional. */
+  isLive: boolean;
+  mine: number;
+  opp: number;
+  oppId: number;
+  oppName: string;
+}
+
+/**
+ * A manager's head-to-head score for the gameweek the H2H tab is showing. It reads the same live
+ * payload and the same pairing rows as that tab, so the two can never disagree.
+ */
+export function currentRoundH2H(managerId: number, live: LiveGwData | null): RoundH2HScore | null {
+  if (!live || live.isPreSeason) return null;
+  const fixture = live.h2h.find(f => f.homeId === managerId || f.awayId === managerId);
+  if (!fixture) return null;
+  const home = fixture.homeId === managerId;
+  return {
+    gw: live.gw,
+    isLive: live.isLive,
+    mine: home ? fixture.homePoints : fixture.awayPoints,
+    opp: home ? fixture.awayPoints : fixture.homePoints,
+    oppId: home ? fixture.awayId : fixture.homeId,
+    oppName: home ? fixture.awayManager : fixture.homeManager,
+  };
+}
+
 /** The month bucket containing a gameweek, defaulting to the first month. */
 export function monthOfGw(gw: number, months: MonthRange[]): MonthRange {
   return months.find(m => m.gws.includes(gw)) || months[0];

@@ -466,6 +466,8 @@ export const App: React.FC = () => {
           <AdvisorView
             managerId={advisorManagerId}
             upcomingGW={upcomingGW}
+            live={live}
+            liveReady={!initialAutoSyncing}
             onManagerChange={handleAdvisorManagerChange}
             onOpenAiChat={prompt => {
               if (prompt) setQueuedAiPrompt(prompt);
@@ -498,6 +500,8 @@ export const App: React.FC = () => {
         managerId={advisorManagerId}
         onManagerChange={handleAdvisorManagerChange}
         upcomingGW={upcomingGW}
+        live={live}
+        liveReady={!initialAutoSyncing}
         queuedPrompt={queuedAiPrompt}
         onConsumePrompt={() => setQueuedAiPrompt(null)}
         onOpenAdvisorTab={() => setActiveTab('advisor')}

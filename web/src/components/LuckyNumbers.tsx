@@ -4,11 +4,12 @@ import {
   analyzeLuckyNumbers,
   FrequencyEntry,
   isLuckyEligible,
-  latestScoredMatch,
+  latestH2HResult,
   LuckyAnalysis,
 } from '../services/xsmbService';
 import { fetchH2HSchedule } from '../services/fplApi';
 import { INITIAL_PLAYERS } from '../data/initialData';
+import { H2HScheduleRow, LiveGwData } from '../types';
 
 interface LuckyNumbersProps {
   managerId: number;
@@ -16,6 +17,10 @@ interface LuckyNumbersProps {
   compact?: boolean;
   /** Sends a question to the league chat; the question box shows only when this is given. */
   onAsk?: (question: string) => void;
+  /** The live payload the H2H tab uses; the current round's score is read from it. */
+  live: LiveGwData | null;
+  /** The first live load has finished (it may have failed), so `live` can be trusted as is. */
+  liveReady: boolean;
 }
 
 // Matches the 5-minute cache the backend keeps on the H2H schedule.
@@ -251,61 +256,87 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
   managerId,
   compact = false,
   onAsk,
+  live,
+  liveReady,
 }) => {
   const [analysis, setAnalysis] = useState<LuckyAnalysis | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
   const [h2hLabel, setH2hLabel] = useState('');
   const [question, setQuestion] = useState('');
+  const [schedule, setSchedule] = useState<H2HScheduleRow[] | null>(null);
+  const [scheduleReady, setScheduleReady] = useState(false);
+  const loading = scheduleLoading || analyzing;
 
   const manager = INITIAL_PLAYERS.find((p) => p.id === managerId);
 
   const loadedAt = useRef(0);
 
-  const load = useCallback(async (force = false) => {
+  // The schedule only supplies earlier rounds; the current round comes from `live`.
+  const loadSchedule = useCallback(async (force = false) => {
     if (!isLuckyEligible(managerId)) return;
-    setLoading(true);
-    setError('');
-    try {
-      const schedule = await fetchH2HSchedule(force);
-      if (!schedule) throw new Error('no_h2h');
-
-      const latest = latestScoredMatch(schedule, managerId);
-      if (!latest) {
-        setError('Chưa có kết quả H2H nào để phân tích.');
-        return;
-      }
-
-      const oppName =
-        INITIAL_PLAYERS.find((p) => p.id === latest.oppId)?.manager || 'Đối thủ';
-      const result = await analyzeLuckyNumbers(latest.mine, latest.opp);
-      setH2hLabel(
-        `GW${latest.gw}: ${manager?.manager ?? '?'} ${latest.mine} – ${latest.opp} ${oppName}`,
-      );
-      setAnalysis(result);
-      loadedAt.current = Date.now();
-    } catch (err) {
-      console.warn('Lucky numbers error:', err);
-      setError('Không thể tải dữ liệu. Thử lại sau.');
-    } finally {
-      setLoading(false);
-    }
-  }, [managerId, manager?.manager]);
+    setScheduleLoading(true);
+    setSchedule(await fetchH2HSchedule(force));
+    setScheduleReady(true);
+    setScheduleLoading(false);
+    loadedAt.current = Date.now();
+  }, [managerId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadSchedule();
+  }, [loadSchedule]);
 
   // A tab left open and brought back must show the newest H2H result, not the one it opened with.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible' && Date.now() - loadedAt.current > REFRESH_AFTER_MS) {
-        load();
+        loadSchedule();
       }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [load]);
+  }, [loadSchedule]);
+
+  // undefined = still loading, null = no result to use. Waiting for `live` keeps the schedule's lagging
+  // score for a running round from flashing up before the real one.
+  const latest = useMemo(
+    () => (scheduleReady && liveReady ? latestH2HResult(managerId, live, schedule) : undefined),
+    [scheduleReady, liveReady, managerId, live, schedule],
+  );
+  const latestKey = latest ? `${latest.gw}:${latest.mine}:${latest.opp}:${latest.provisional}` : String(latest);
+
+  useEffect(() => {
+    if (latest === undefined) return;
+    if (latest === null) {
+      setAnalyzing(false);
+      setError(schedule || live ? 'Chưa có kết quả H2H nào để phân tích.' : 'Không thể tải dữ liệu. Thử lại sau.');
+      return;
+    }
+    let cancelled = false;
+    setAnalyzing(true);
+    setError('');
+    const oppName = INITIAL_PLAYERS.find((p) => p.id === latest.oppId)?.manager || 'Đối thủ';
+    analyzeLuckyNumbers(latest.mine, latest.opp)
+      .then((result) => {
+        if (cancelled) return;
+        setAnalysis(result);
+        setH2hLabel(
+          `GW${latest.gw}${latest.provisional ? ' (đang đá)' : ''}: ${manager?.manager ?? '?'} ${latest.mine} – ${latest.opp} ${oppName}`,
+        );
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn('Lucky numbers error:', err);
+        setError('Không thể tải dữ liệu. Thử lại sau.');
+      })
+      .finally(() => {
+        if (!cancelled) setAnalyzing(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [latestKey, managerId]);
 
   if (!isLuckyEligible(managerId)) return null;
 
@@ -401,7 +432,7 @@ export const LuckyNumbers: React.FC<LuckyNumbersProps> = ({
         </div>
         <button
           type="button"
-          onClick={() => load(true)}
+          onClick={() => loadSchedule(true)}
           disabled={loading}
           className="pressable w-6 h-6 rounded-full flex items-center justify-center disabled:opacity-40"
           style={{

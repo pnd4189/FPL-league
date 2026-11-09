@@ -8,7 +8,8 @@
  * Only used by managers Shark Lâm (4403856) and Đại (1860254).
  */
 
-import type { H2HScheduleRow } from '../types';
+import type { H2HScheduleRow, LiveGwData } from '../types';
+import { currentRoundH2H } from './liveStandings';
 
 const XSMB_CSV_URL =
   'https://raw.githubusercontent.com/khiemdoan/vietnam-lottery-xsmb-analysis/refs/heads/main/data/xsmb-2-digits.csv';
@@ -45,6 +46,26 @@ export function latestScoredMatch(
     opp: isHome ? latest.awayPts : latest.homePts,
     oppId: isHome ? latest.awayId : latest.homeId,
   };
+}
+
+/**
+ * The H2H result the lucky numbers are taken from. The round the H2H tab is showing comes from the same
+ * live payload as that tab: FPL's league endpoint (the schedule) lags a running round by hours, so using it
+ * there showed a different score from the tab. The schedule only supplies earlier rounds, or everything when
+ * the live payload is unavailable (which is also what the H2H tab falls back to).
+ */
+export function latestH2HResult(
+  managerId: number,
+  live: LiveGwData | null,
+  schedule: H2HScheduleRow[] | null,
+): { gw: number; mine: number; opp: number; oppId: number; provisional: boolean } | null {
+  const round = currentRoundH2H(managerId, live);
+  if (round && (round.mine > 0 || round.opp > 0)) {
+    return { gw: round.gw, mine: round.mine, opp: round.opp, oppId: round.oppId, provisional: round.isLive };
+  }
+  const rows = (schedule ?? []).filter((m) => !round || m.gw < round.gw);
+  const earlier = latestScoredMatch(rows, managerId);
+  return earlier && { ...earlier, provisional: false };
 }
 
 export interface XsmbDay {

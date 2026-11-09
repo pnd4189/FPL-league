@@ -170,15 +170,55 @@ function h2hLead_(d) {
   return Math.abs(gap) < 0.5 ? "ngang" : (gap > 0 ? "hon" : "kem");
 }
 
+/**
+ * The manager's actual head-to-head score for the gameweek the H2H tab shows, from the same live payload
+ * the website polls (`?action=live`), so the chat and the tab always quote the same score.
+ *
+ * @return {{gw: number, provisional: boolean, mine: number, opp: number, oppName: string}|null}
+ */
+function currentH2HScore_(managerId) {
+  let live = null;
+  try {
+    live = getLiveData();
+  } catch (e) {
+    return null;
+  }
+  if (!live || live.status !== "success" || live.data.isPreSeason) return null;
+  const id = String(managerId);
+  const row = (live.data.h2h || []).filter(function (f) {
+    return String(f.homeId) === id || String(f.awayId) === id;
+  })[0];
+  if (!row) return null;
+  const home = String(row.homeId) === id;
+  return {
+    gw: live.data.gw,
+    provisional: !!live.data.isLive,
+    mine: home ? row.homePoints : row.awayPoints,
+    opp: home ? row.awayPoints : row.homePoints,
+    oppName: home ? row.awayManager : row.homeManager
+  };
+}
+
+/** Real score of the round being played (or just finished); the verdict is computed here, never by the model. */
+function currentH2HFacts_(d) {
+  const score = currentH2HScore_(d.id);
+  if (!score) return "H2H VÒNG ĐANG ĐÁ: chưa đọc được điểm của cặp đấu này.";
+  const gap = score.mine - score.opp;
+  const verdict = gap === 0 ? "hai bên đang HOÀ nhau" : d.manager + (gap > 0 ? " đang HƠN " : " đang KÉM ") + Math.abs(gap) + " điểm";
+  return "H2H " + (score.provisional ? "VÒNG ĐANG ĐÁ GW" + score.gw + " (điểm thật, tạm tính vì FPL chưa chốt vòng; tab H2H hiện đúng số này)"
+      : "VÒNG VỪA KẾT THÚC GW" + score.gw + " (đã chốt)") +
+    ": " + d.manager + " " + score.mine + " – " + score.opp + " " + score.oppName + ". NHẬN ĐỊNH (dùng đúng ý này): " + verdict + ".";
+}
+
 function h2hFacts_(d) {
-  if (!d.opponent) return "Vòng này " + d.manager + " không có đối thủ H2H.";
+  if (!d.opponent) return "Vòng sắp tới GW" + d.gw + " " + d.manager + " không có đối thủ H2H.";
   const gap = Math.abs(Math.round((d.opponent.myProjected - d.opponent.theirProjected) * 10) / 10);
   const lead = h2hLead_(d);
   const verdict = lead === "ngang"
     ? "hai bên gần như ngang nhau"
     : d.manager + (lead === "hon" ? " đang HƠN " : " đang KÉM ") + gap + " điểm dự kiến";
   return [
-    "ĐỐI THỦ H2H vòng " + d.gw + ": " + d.opponent.manager + ". Điểm dự kiến cả đội: " + d.manager + " " + d.opponent.myProjected +
+    "ĐỐI THỦ H2H vòng sắp tới GW" + d.gw + " (chưa đá, chỉ là điểm dự kiến): " + d.opponent.manager + ". Điểm dự kiến cả đội: " + d.manager + " " + d.opponent.myProjected +
       ", " + d.opponent.manager + " " + d.opponent.theirProjected + ". NHẬN ĐỊNH (dùng đúng ý này): " + verdict + ".",
     "Con bài của " + d.manager + " mà đối thủ không có: " + (d.opponent.edge.map(aiShortText_).join("; ") || "không có"),
     "Mối đe doạ của " + d.opponent.manager + " mà " + d.manager + " không có: " + (d.opponent.threat.map(aiShortText_).join("; ") || "không có")
@@ -412,8 +452,10 @@ function leagueFacts_(managerName, state) {
  * @param {Array<string>} topics from routeQuestion_
  * @param {Array<string>} mentioned player ids named in the question
  * @param {string} [question] the question itself, to answer a named chip first
+ * @param {boolean} [withLiveScore] add the real score of the round being played; left out of the stored
+ *   comment, whose text would go stale as the score moves
  */
-function buildAiFacts_(d, topics, mentioned, question) {
+function buildAiFacts_(d, topics, mentioned, question, withLiveScore) {
   const state = getSeasonState();
   const pool = state ? getAdvisorPool_(state.nextGw, state.finishedGws) : null;
   const season = state ? getAdvisorSeason_(state.nextGw, state.finishedGws) : null;
@@ -430,6 +472,7 @@ function buildAiFacts_(d, topics, mentioned, question) {
     "m. (đ = điểm dự kiến của trợ lý, độ khó 1 dễ - 5 khó)"];
   if (has("lucky")) parts.push(luckyFacts_(d));
   if (has("captain")) parts.push(captainFacts_(d));
+  if (has("h2h") && withLiveScore) parts.push(currentH2HFacts_(d));
   if (has("h2h")) parts.push(h2hFacts_(d));
   // The rules paragraph is only worth its tokens when the question is about transfers or chips;
   // a general question (default packs + chip summary) gets the plan without it.
