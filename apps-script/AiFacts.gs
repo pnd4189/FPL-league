@@ -413,19 +413,36 @@ function leagueFacts_(managerName, state) {
     } catch (e) { /* serve uncached */ }
   }
 
-  const lines = ["GIẢI ĐẤU (tính tới GW" + state.finishedGws + " đã chốt):"];
-  const classic = tables.classic.slice().sort(function (a, b) { return Number(b.TOTAL) - Number(a.TOTAL); });
-  const meIndex = classic.findIndex(function (r) { return r.HLV === managerName; });
-  if (meIndex !== -1) {
-    const me = classic[meIndex];
-    let text = "Classic: " + managerName + " hạng " + (meIndex + 1) + "/" + classic.length + ", tổng " + me.TOTAL + " điểm";
-    if (meIndex === 0) text += ", đang dẫn đầu, hơn hạng 2 (" + classic[1].HLV + ") " + (me.TOTAL - classic[1].TOTAL) + " điểm";
-    else text += ", kém người dẫn đầu " + classic[0].HLV + " " + (classic[0].TOTAL - me.TOTAL) + " điểm, kém người xếp ngay trên " + classic[meIndex - 1].HLV + " " + (classic[meIndex - 1].TOTAL - me.TOTAL) + " điểm";
+  // The tabs on the website show the gameweek in progress already folded in; quote the same numbers.
+  let live = null;
+  try {
+    const payload = getLiveData();
+    if (payload && payload.status === "success") live = payload.data;
+  } catch (e) { /* settled tables only */ }
+  const merged = mergeLiveTables_(tables.classic, tables.h2h, live);
+  const through = merged.liveGw ? Math.max(state.finishedGws, merged.liveGw) : state.finishedGws;
+  const lines = [merged.provisional
+    ? "GIẢI ĐẤU (đã gồm điểm GW" + merged.liveGw + " đang đá, tạm tính vì FPL chưa chốt vòng; các bảng trên web cũng tính như vậy):"
+    : merged.liveGw
+      ? "GIẢI ĐẤU (tính tới GW" + through + " đã chốt):"
+      : "GIẢI ĐẤU (theo bảng đã lưu, chưa chắc đã gồm điểm vòng đang đá):"];
+
+  const classic = merged.classic;
+  const me = classic.filter(function (r) { return r.HLV === managerName; })[0];
+  if (me) {
+    const total = Number(me.TOTAL);
+    let text = "Classic: " + managerName + " hạng " + me["#"] + "/" + classic.length + ", tổng " + total + " điểm";
+    if (me["#"] === 1) text += ", đang dẫn đầu, hơn hạng 2 (" + classic[1].HLV + ") " + (total - Number(classic[1].TOTAL)) + " điểm";
+    else {
+      const above = classic.filter(function (r) { return r["#"] < me["#"]; });
+      const next = above[above.length - 1];
+      text += ", kém người dẫn đầu " + classic[0].HLV + " " + (Number(classic[0].TOTAL) - total) + " điểm, kém người xếp ngay trên " + next.HLV + " " + (Number(next.TOTAL) - total) + " điểm";
+    }
     lines.push(text + ".");
 
     const bucket = getMonthBuckets().filter(function (m) { return m.gws.indexOf(state.nextGw) !== -1; })[0];
     if (bucket) {
-      const done = bucket.gws.filter(function (g) { return g <= state.finishedGws; });
+      const done = bucket.gws.filter(function (g) { return g <= through; });
       const month = classic.map(function (r) {
         return { name: r.HLV, pts: done.reduce(function (s, g) { return s + (Number(r["GW" + g]) || 0); }, 0) };
       }).sort(function (a, b) { return b.pts - a.pts; });
@@ -437,7 +454,7 @@ function leagueFacts_(managerName, state) {
     }
   }
 
-  const h2h = tables.h2h.slice().sort(function (a, b) { return Number(a["#"]) - Number(b["#"]); });
+  const h2h = merged.h2h;
   const mineH = h2h.filter(function (r) { return r.HLV === managerName; })[0];
   if (mineH) {
     lines.push("H2H: " + managerName + " hạng " + mineH["#"] + ", " + mineH.Pts + " điểm H2H (thắng " + mineH.W + ", hoà " + mineH.D + ", thua " + mineH.L + ")" +

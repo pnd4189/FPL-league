@@ -266,9 +266,13 @@ export async function fetchMonthlyAwards(): Promise<ApiResult<MonthlyAward[]>> {
  * Provisional scores for the gameweek in progress. Cheap enough (one cached
  * call shared by every visitor) to poll while people are watching.
  */
-export async function fetchLiveData(): Promise<LiveGwData | null> {
+/**
+ * `fresh` asks the backend for scores no older than a minute: used when the page opens or comes back to the
+ * front, so the first numbers on screen are current rather than the shared copy kept between matches.
+ */
+export async function fetchLiveData(fresh = false): Promise<LiveGwData | null> {
   try {
-    const json = await fetchJson(endpoint('live'), READ_TIMEOUT_MS, 1, j => j.status === 'success' && !!j.data);
+    const json = await fetchJson(`${endpoint('live')}${fresh ? '&fresh=1' : ''}`, READ_TIMEOUT_MS, 1, j => j.status === 'success' && !!j.data);
     if (json && json.data) return json.data as LiveGwData;
     return null;
   } catch (err) {

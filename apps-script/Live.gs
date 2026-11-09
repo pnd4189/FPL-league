@@ -460,6 +460,26 @@ function getLiveData(forceRefresh) {
   return payload;
 }
 
+// A page that has just opened accepts a shared copy no older than this.
+const LIVE_FRESH_MS = 60000;
+
+/**
+ * Live payload for a page that has just opened. The shared copy is kept for minutes between matches, so a
+ * visitor could see scores that old; here it is rebuilt when it is older than LIVE_FRESH_MS. However many
+ * people open the site, that is at most one rebuild a minute.
+ */
+function getLiveDataFresh_() {
+  const cached = CacheService.getScriptCache().get("live_payload");
+  if (cached) {
+    try {
+      const payload = JSON.parse(cached);
+      const age = Date.now() - new Date(payload.data.updatedAt).getTime();
+      if (age >= 0 && age < LIVE_FRESH_MS) return payload;
+    } catch (e) { /* rebuild below */ }
+  }
+  return getLiveData(true);
+}
+
 /** Menu action: recompute live scores immediately, ignoring the cache. */
 function refreshLiveNow() {
   const payload = getLiveData(true);

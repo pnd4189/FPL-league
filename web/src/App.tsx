@@ -19,6 +19,7 @@ import {
 import {
   mergeLiveClassic,
   mergeLiveH2H,
+  rankH2HStandings,
   monthOfGw,
   livePollInterval,
   MonthRange,
@@ -176,8 +177,8 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  const loadLive = useCallback(async () => {
-    const payload = await fetchLiveData();
+  const loadLive = useCallback(async (fresh = false) => {
+    const payload = await fetchLiveData(fresh);
     if (payload) setLive(payload);
     return payload;
   }, []);
@@ -206,7 +207,7 @@ export const App: React.FC = () => {
       setIsSyncing(true);
       try {
         await triggerLiveSync();
-        await Promise.all([loadData(), loadLive(), loadSeason()]);
+        await Promise.all([loadData(), loadLive(true), loadSeason()]);
       } finally {
         setIsSyncing(false);
       }
@@ -218,7 +219,7 @@ export const App: React.FC = () => {
     const initApp = async () => {
       setInitialAutoSyncing(true);
       try {
-        await Promise.all([loadData(), loadLive(), loadSeason()]);
+        await Promise.all([loadData(), loadLive(true), loadSeason()]);
       } catch (err) {
         console.warn('Initial load finished with errors:', err);
       } finally {
@@ -245,7 +246,9 @@ export const App: React.FC = () => {
     };
 
     // Coming back to the tab should show current scores immediately.
-    const onVisibilityChange = () => tick();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadLive(true);
+    };
 
     const timer = window.setInterval(tick, pollMs);
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -263,7 +266,7 @@ export const App: React.FC = () => {
     setIsSyncing(true);
     try {
       await triggerLiveSync();
-      await Promise.all([loadData(), loadLive(), loadSeason()]);
+      await Promise.all([loadData(), loadLive(true), loadSeason()]);
     } catch (err) {
       console.error('Sync failed:', err);
     } finally {
@@ -283,14 +286,17 @@ export const App: React.FC = () => {
     // The H2H Classic column mirrors the Classic tab's live TOTAL. The h2h
     // sheet snapshot already counts the live gameweek, so re-derive it from
     // the same fresh numbers the Classic table shows instead of trusting a
-    // possibly hours-old copy.
+    // possibly hours-old copy. The ranking tie-break reads that column, so it
+    // is ranked again once the totals are replaced.
     const totals = new Map(liveClassicStandings.map(c => [c.id, c.total]));
-    return merged.map(row => {
-      const total = totals.get(row.id);
-      return total !== undefined && total !== row.classicTotal
-        ? { ...row, classicTotal: total }
-        : row;
-    });
+    return rankH2HStandings(
+      merged.map(row => {
+        const total = totals.get(row.id);
+        return total !== undefined && total !== row.classicTotal
+          ? { ...row, classicTotal: total }
+          : row;
+      }),
+    );
   }, [h2hStandings, live, liveClassicStandings]);
 
   // The gameweek every standings/results tab lands on by default (settled or in-play).
@@ -421,6 +427,7 @@ export const App: React.FC = () => {
             currentGW={currentGW}
             isLive={isLiveNow}
             live={live}
+            liveReady={!initialAutoSyncing}
             onSelectPlayer={id => setSelectedPlayerId(id)}
           />
         )}

@@ -59,6 +59,7 @@ const AI_RULES =
   "Suy nghĩ kỹ trước khi trả lời, nhưng chỉ đưa câu trả lời cuối, không kể lại quá trình suy luận. " +
   "Với câu hỏi con số may mắn: chỉ nói theo số liệu XSMB trong DỮ LIỆU, luôn nhắc đây là xổ số quay ngẫu nhiên, không hứa trúng. " +
   "Khi người hỏi nêu một con số cụ thể, dòng SỐ ĐƯỢC HỎI có thống kê thật của số đó: hãy nêu số lần ra, hạng và lần gần nhất của đúng số ấy, không từ chối và không nói chưa có dữ liệu; số không phải cặp H2H vẫn tư vấn bình thường. " +
+  "Khi người hỏi không nêu số nào mà xin con số may mắn, cặp số gợi ý phải là đúng CẶP SỐ MẶC ĐỊNH trong DỮ LIỆU (2 số của tỉ số H2H) kèm thống kê của từng số; 5 số ra nhiều nhất chỉ nhắc thêm, không được thay cặp đó. " +
   "Viết bằng tiếng Việt tự nhiên, dấu đúng, không Việt hoá gượng các thuật ngữ FPL.";
 
 function normalizeText_(text) {

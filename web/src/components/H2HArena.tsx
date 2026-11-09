@@ -13,6 +13,8 @@ interface H2HArenaProps {
   currentGW?: number;
   isLive?: boolean;
   live?: LiveGwData | null;
+  /** The first live load has finished, successfully or not. */
+  liveReady?: boolean;
   onSelectPlayer: (id: number) => void;
 }
 
@@ -21,6 +23,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
   currentGW = 1,
   isLive = false,
   live = null,
+  liveReady = true,
   onSelectPlayer,
 }) => {
   const [selectedGW, setSelectedGW] = useState<number>(currentGW);
@@ -104,9 +107,12 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
   };
 
   const liveNow = liveMatches();
-  const matches = liveNow || scheduleMatches() || [];
+  // FPL's league schedule lags a running round by hours, so until the first live load has finished the current
+  // round shows a loading line instead of those old points.
+  const awaitingLive = !liveReady && selectedGW === currentGW;
+  const matches = liveNow || (awaitingLive ? [] : scheduleMatches()) || [];
   const showingLive = isLive && selectedGW === currentGW && !!liveNow;
-  const scheduleLoading = !liveNow && schedule === null;
+  const scheduleLoading = !liveNow && (awaitingLive || schedule === null);
 
   return (
     <div className="space-y-8 md:space-y-10">
@@ -213,7 +219,7 @@ export const H2HArena: React.FC<H2HArenaProps> = ({
                   className="text-xs font-mono col-span-full py-8 text-center"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  Đang tải lịch bốc thăm chính thức từ FPL...
+                  {awaitingLive ? 'Đang tải điểm mới nhất...' : 'Đang tải lịch bốc thăm chính thức từ FPL...'}
                 </p>
               ) : matches.length === 0 ? (
                 <p

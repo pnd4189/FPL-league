@@ -134,7 +134,7 @@ function doGet(e) {
         result = getPlayersWithAvatars();
         break;
       case "live":
-        result = getLiveData();
+        result = String(params.fresh) === "1" ? getLiveDataFresh_() : getLiveData();
         break;
       case "advisor":
         result = getAdvisorWithReview_(params.id);

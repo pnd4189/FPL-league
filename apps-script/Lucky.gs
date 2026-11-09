@@ -157,6 +157,11 @@ function luckyFacts_(d, question) {
 
   if (score) {
     const seeds = [score.mine % 100, score.opp % 100];
+    // Without a number in the question the suggestion is this pair, the same two numbers the card shows.
+    if (!asked.length) {
+      parts.push("CẶP SỐ MẶC ĐỊNH (dùng đúng ý này khi người hỏi không nêu số nào): " + twoDigits_(seeds[0]) + " và " + twoDigits_(seeds[1]) +
+        ", là 2 số cuối của tỉ số H2H hiện tại " + score.mine + " – " + score.opp + ".");
+    }
     parts.push("Cặp số lấy từ tỉ số H2H GW" + score.gw + (score.provisional ? " (đang đá, tạm tính)" : "") + " của " + d.manager + " " +
       score.mine + " – " + score.opp + " " + score.oppName + " là " + twoDigits_(seeds[0]) + " và " + twoDigits_(seeds[1]) + ": " +
       seeds.map(function (n) { return luckyNumberText_(n, rows, counts); }).join("; ") + ".");
@@ -166,7 +171,7 @@ function luckyFacts_(d, question) {
 
   const hot = counts.map(function (c, n) { return { n: n, c: c }; })
     .sort(function (a, b) { return b.c - a.c || a.n - b.n; });
-  parts.push("5 số ra nhiều nhất trong " + rows.length + " ngày quay: " +
+  parts.push("5 số ra nhiều nhất (chỉ để tham khảo thêm, không thay cho cặp mặc định) trong " + rows.length + " ngày quay: " +
     hot.slice(0, 5).map(function (h) { return twoDigits_(h.n) + " (" + h.c + " lần)"; }).join(", ") + ".");
 
   return "CON SỐ MAY MẮN (mỗi kỳ quay có 27 số, chỉ lấy 2 chữ số cuối; \"ra N lần\" là số kỳ quay có số đó xuất hiện). " +
